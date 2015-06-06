@@ -1,4 +1,4 @@
-Jin - Jsonified Ini Notion
+Jin - Jsonified Ini Notation
 =====
 
 Jin is a simple configuration language which can be used for all sorts of purposes.  It's similar
