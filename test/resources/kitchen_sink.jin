@@ -1,0 +1,29 @@
+[person]
+firstName = "Matthew"
+lastName  = "Sahagian"
+location  = "Silicon Valley, CA"
+email     = "msahagian@dotink.org"
+age       = 31
+pi        = 3.14159
+single    = FALSE
+employed  = TRUE
+vehicles  = ["2005 Mazda 6"]
+favorites = {
+	"food":  "Indian",
+	"hobby": "Homebrew",
+	"music": "Classic Rock"
+}
+
+	[person.education]
+	level = "Associates"
+
+		[person.education.highschool]
+		name     = "Bellingham Memorial High School"
+		location = "Bellingham, MA"
+		gradYear = 2002
+
+		[person.education.college]
+		name     = "New England Institute of Technology"
+		location = "Warwick, RI"
+		gradYear = 2004
+		degree   = "Associates"

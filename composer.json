@@ -1,0 +1,23 @@
+{
+	"name": "dotink/jin",
+	"description": "Jsonified Ini Notation",
+	"keywords": ["Keyword"],
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "Matthew J. Sahagian",
+			"email": "msahagian@dotink.org",
+			"role": "Developer"
+		}
+	],
+	"require-dev": {
+		"dotink/lab": "^1.1"
+	},
+	"require": {
+		"php": ">=5.4.0",
+		"dotink/flourish-collection": "^1.1"
+	},
+	"autoload": {
+		"classmap": ["src/"]
+	}
+}
