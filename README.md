@@ -75,10 +75,10 @@ nullValue = NULL
 
 ### Multi-Line Text
 
-```php
-multi = Jin supports multi lines as well so long as they do not look like an INI field.  It
-should be noted however that multiple lines will not retain their line breaks.  New lines will,
-instead be separated by a space.
+```yaml
+multi = Jin supports multi lines as well so long as they do not look like an
+INI field.  It should be noted however that multiple lines will not retain their
+line breaks.  New lines will, instead be separated by a space.
 ```
 
 ### JSON Structures
@@ -116,11 +116,37 @@ fieldFive  = {
 }
 ```
 
+### Sub Categories
+
+You can add subcategories by separating the previous category name by a dot.  This is extremely
+useful for keyed configuration values with repeating data, for example, imagine a database config
+with multiple aliases connections:
+
+```yaml
+[database]
+
+	[database.connections.default]
+	driver = pgsql
+	dbname = website
+	host   = localhost
+
+	[database.connections.forums]
+	driver = mysql
+	dbname = forums
+	host   = localhost
+	user   = web
+	pass   = 3ch0th3w4lRUS
+```
+
+**Note: The leading whitespace does not matter and can be tabs or spaces**
+
 ## Addendum
 
-Note:  Jin was written primarily as a way to configure a data mapper ORM.  While it should serve
-a lot of configuration needs well, since there is no formalized spec, strange edge cases may be
+Jin was written primarily as a way to configure a data mapper ORM.  While it should serve a lot
+of configuration needs well, since there is no formalized spec, strange edge cases may be
 possible.
+
+Keep in Mind:
 
 - Category identifiers SHOULD only contain `a-z`, `A-Z`, `.`, `\`, `-`, and `_`
 - Field identifiers SHOULD only contain `a-z`, `A-Z`, `-` and `_`
@@ -208,11 +234,8 @@ Array
 							[gradYear] => 2004
 							[degree] => Associates
 						)
-
 				)
-
 		)
-
 )
 ```
 
