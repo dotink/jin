@@ -27,7 +27,7 @@ $config_data = $jin_parser->parse($jin_string, TRUE)->get();
 ```
 
 If you'd rather work directly with the collection you can leave off the `get()`.  You can see
-more documentation about the collection at [https://github.com/dotink/flourish-collection]:
+more documentation about the collection at (https://github.com/dotink/flourish-collection):
 
 ```php
 $config = $jin_parser->parse($jin_string, TRUE);
@@ -242,7 +242,9 @@ Array
 
 ## Editor Support
 
-I've noticed that a lot of existing syntax highlighting can make Jin look good, but my favorite,
-thus far, is `Javascript (Rails)` in atom.  I may try to replicate that highlighting and release
-a package.  I welcome any other suggestions people have for languages that match similarly and
-provide nice highlighting.
+There is a hobbled together grammar file for Atom which can be found here: 
+
+https://github.com/dotink/atom-language-jin
+
+For other editors, I've noticed that Javascript highlighting tends to look pretty good with
+the exception of INI comments.
