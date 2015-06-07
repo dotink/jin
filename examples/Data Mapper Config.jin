@@ -9,9 +9,9 @@ ordering   = {
 
 [Person]
 identity   = id
-uniqueOn   = {
+uniqueOn   = [
 	["team", "team_rank"]
-}
+]
 
 	[Person.fields.id]
 	type	  = integer
@@ -25,7 +25,7 @@ uniqueOn   = {
 
 	[Person.fields.lastName]
 	type	 = string
-	mapping  = first_name
+	mapping  = last_name
 	nullable = TRUE
 
 	; Example of one-to-many
