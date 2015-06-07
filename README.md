@@ -1,24 +1,136 @@
 Jin - Jsonified Ini Notation
 =====
 
-Jin is a simple configuration language which can be used for all sorts of purposes.  It's similar
-to TOML [https://github.com/toml-lang/toml], but a lot simpler and less formal.  It's basically
-INI files which contain JSON values.
+Jin is INI files which supports JSON values.
 
-I wrote this primarily as a way to configure the new ORM I'm working on, so it's application and
-usefulness may vary.
+It is a simple and informal configuration language which can be used for all sorts of purposes.
+It works best as a metaconfiguration or schema configuration as it is extremely good for repeated
+blocks of data that need to be keyed differently.
 
-Here are the rules:
+In some ways it is similar to TOML (https://github.com/toml-lang/toml), but does not have a formal
+specification.
 
-- Category identifiers can only contain `a-z`, `A-Z`, `.`, and `_`
-- Field identifiers can only contain `a-z`, `A-Z`, and `_`
+## Basic Usage
+
+```php
+$collection  = new Dotink\Flourish\Collection();
+$jin_parser  = new Dotink\Jin\Parser($collection);
+
+$config_data = $jin_parser->parse($jin_string)->get();
+```
+
+You can make turn `stdClass` objects in parsed JSON into additional associative arrays by
+passing `TRUE` as the second parameter:
+
+```php
+$config_data = $jin_parser->parse($jin_string, TRUE)->get();
+```
+
+If you'd rather work directly with the collection you can leave off the `get()`.  You can see
+more documentation about the collection at [https://github.com/dotink/flourish-collection]:
+
+```php
+$config = $jin_parser->parse($jin_string, TRUE);
+```
+
+## The Language
+
+### A Simple Field
+
+```yaml
+field = value
+```
+
+Strings don't have to be quoted, but can be:
+
+```yaml
+field = "value"
+```
+
+Integers are converted to the proper type automatically:
+
+```yaml
+integerValue = 1
+```
+
+Floats too...
+
+```yaml
+floatValue = 1.03
+```
+
+Booleans and NULL values are case insensitive:
+
+```yaml
+boolValue = false
+```
+
+```yaml
+boolValue = TRUE
+```
+
+```yaml
+nullValue = NULL
+```
+
+### Multi-Line Text
+
+```php
+multi = Jin supports multi lines as well so long as they do not look like an INI field.  It
+should be noted however that multiple lines will not retain their line breaks.  New lines will,
+instead be separated by a space.
+```
+
+### JSON Structures
+
+Arrays are defined literally:
+
+```yaml
+favoriteFoods = ["Tacos", "Sushi", "Curry"]
+```
+
+Objects are also defined literally and can span multiple lines:
+
+```yaml
+favorites = {
+	"food":  "Indian",
+	"music": "Classic Rock"
+}
+```
+
+### Categories
+
+Categories are an alternative to object structures.  While objects (by default) in JSON notation
+will result in `stdClass` objects, categories will be associative arrays.  It is recommended that
+categories be used when the fields represent a well defined schema, and JSON objects be used for
+what amounts to user supplied data.
+
+```yaml
+[category]
+fieldOne   = valueOne
+fieldTwo   = valueTwo
+fieldThree = 1
+fieldFour  = [0, 7, 9, 13]
+fieldFive  = {
+	"foo": "bar"
+}
+```
+
+## Addendum
+
+Note:  Jin was written primarily as a way to configure a data mapper ORM.  While it should serve
+a lot of configuration needs well, since there is no formalized spec, strange edge cases may be
+possible.
+
+- Category identifiers SHOULD only contain `a-z`, `A-Z`, `.`, `\`, `-`, and `_`
+- Field identifiers SHOULD only contain `a-z`, `A-Z`, `-` and `_`
 - JSON can span multiple lines, line breaks in content or comments are a no-No!
 
-## Input Example
+The basic transformation algorithm is rather simple, so feel free to look at the source if you're
+running into a particular bug.  Although we will entertain new features or additional
+formalization, please keep in mind that this is designed with informality in mind.
 
-In the example below we define a little bit of information about me.  Note... things that look
-like integers will become integers.  Things that look like floats will become floats.  Things that
-look like objects will become objects.  Things that... you get the idea.
+### Kitchen Sink Example
 
 ```clojure
 [person]
@@ -52,9 +164,7 @@ favorites = {
 		degree   = "Associates"
 ```
 
-## Output Example
-
-Below is the `print_r` output from the above configuration.
+#### Outputted Array
 
 ```
 Array
@@ -106,28 +216,6 @@ Array
 )
 ```
 
-## Usage
-
-```php
-$collection  = new Dotink\Flourish\Collection();
-$jin_parser  = new Dotink\Jin\Parser($collection);
-
-$config_data = $jin_parser->parse($jin_string)->get();
-```
-
-You can make turn `stdClass` objects in parsed JSON into additional associative arrays by
-passing `TRUE` as the second parameter:
-
-```php
-$config_data = $jin_parser->parse($jin_string, TRUE)->get();
-```
-
-If you'd rather work directly with the collection you can leave off the `get()`.  You can see
-more documentation about the collection at [https://github.com/dotink/flourish-collection]:
-
-```php
-$config = $jin_parser->parse($jin_string, TRUE);
-```
 
 ## Editor Support
 

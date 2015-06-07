@@ -7,6 +7,11 @@
 	 */
 	class Parser
 	{
+		const REGEX_CATEGORY_IDENTIFIER = '[\\\\a-zA-Z-_.]+';
+		const REGEX_FIELD_IDENTIFIER    = '[a-zA-Z-_]+';
+		const REGEX_NEW_LINE            = '\n';
+		const REGEX_WHITESPACE          = '\t|\s';
+
 		/**
 		 * Create a new Jin
 		 *
@@ -35,23 +40,33 @@
 
 			foreach (parse_ini_string($jin_string, TRUE, INI_SCANNER_RAW) as $index => $values) {
 				foreach ($values as $key => $value) {
-					if ($value[0] == '{' || $value[0] == '[') {
+
+					$leadch = strtolower($value[0]);
+					$length = strlen($value);
+
+					if (in_array($leadch, ['n', 't', 'f']) && in_array($length, [4, 5])) {
+						if (strtolower($value) == 'null') {
+							$values[$key] = NULL;
+						} elseif (strtolower($value) == 'true') {
+							$values[$key] = TRUE;
+						} elseif (strtolower($value) == 'false') {
+							$values[$key] = FALSE;
+						}
+
+						continue;
+
+					} elseif (in_array($leadch, ['{', '['])) {
 						$values[$key] = json_decode($value, $assoc);
 
 					} elseif (is_numeric($value)) {
 						$values[$key] = json_decode($value);
+					}
 
-					} else {
-						$leadch = strtolower($value[0]);
-						$length = strlen($value);
-
-						if (in_array($leadch, ['t', 'f']) && in_array($length, [4, 5])) {
-							if (strtolower($value) == 'true') {
-								$values[$key] = TRUE;
-							} elseif (strtolower($value) == 'false') {
-								$values[$key] = FALSE;
-							}
-						}
+					if ($values[$key] === NULL) {
+						throw new Flourish\ProgrammerException(
+							'Error parsing JSON data: %s',
+							$value
+						);
 					}
 				}
 
@@ -71,7 +86,12 @@
 		 */
 		protected function removeNewLines($string)
 		{
-			return preg_replace('#(^|\n)(?!([a-zA-Z_]+\s*=|\[[a-zA-Z._]+\]))#', '$2', $string);
+			return preg_replace(sprintf(
+				'#(^|%s)(?!(\[%s\]|%s\s*=))#',
+				self::REGEX_NEW_LINE,
+				self::REGEX_CATEGORY_IDENTIFIER,
+				self::REGEX_FIELD_IDENTIFIER
+			), ' $2', $string);
 		}
 
 		/**
@@ -83,7 +103,11 @@
 		 */
 		protected function removeWhitespace($string)
 		{
-			return preg_replace('#(^|\n)(\t|\s)*#', '$1', $string);
+			return preg_replace(sprintf(
+				'#(^|%s)(%s)*#',
+				self::REGEX_NEW_LINE,
+				self::REGEX_WHITESPACE
+			), '$1', $string);
 		}
 	}
 }

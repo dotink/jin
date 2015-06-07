@@ -27,3 +27,7 @@ favorites = {
 		location = "Warwick, RI"
 		gradYear = 2004
 		degree   = "Associates"
+
+multi = This supports multi lines as well so long as they do not look like an INI field.  It
+should be noted however that multiple lines will not retain their line breaks.  New lines will,
+instead be separated by a space.
