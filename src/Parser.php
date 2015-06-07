@@ -18,9 +18,9 @@
 		 * @access public
 		 * @return void
 		 */
-		public function __construct(Flourish\Collection $collection)
+		public function __construct(Flourish\Collection $collection = NULL)
 		{
-			$this->collection = $collection;
+			$this->collection = $collection ?: new Flourish\Collection();
 		}
 
 

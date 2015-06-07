@@ -1,27 +1,31 @@
 [People]
-model = Person
-table = people
-order = {
+convention = Flourish
+collection = people
+model      = Person
+ordering   = {
 	"lastName"  : "asc",
 	"firstName" : "asc"
 }
 
 [Person]
-identity = id
+identity   = id
+uniqueOn   = {
+	["team", "team_rank"]
+}
 
 	[Person.fields.id]
 	type	  = integer
-	column	  = id
+	mapping	  = id
 	generator = native
 
 	[Person.fields.firstName]
 	type	 = string
-	column   = first_name
+	mapping  = first_name
 	nullable = FALSE
 
 	[Person.fields.lastName]
 	type	 = string
-	column   = first_name
+	mapping  = first_name
 	nullable = TRUE
 
 	; Example of one-to-many
@@ -39,11 +43,18 @@ identity = id
 	; Example of many-to-one
 
 	[Person.fields.team]
-	type   = hasOne
-	target = Team
-	route  = {
+	type    = hasOne
+	target  = Team
+	mapping = team
+	route   = {
 		"team" : "id"
 	}
+
+	[Person.fields.teamRank]
+	type    = integer
+	mapping = team_rank
+	default = NULL
+
 
 	; Example of one-to-one
 
