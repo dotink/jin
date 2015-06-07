@@ -1,0 +1,68 @@
+[People]
+model = Person
+table = people
+order = {
+	"lastName"  : "asc",
+	"firstName" : "asc"
+}
+
+[Person]
+identity = id
+
+	[Person.fields.id]
+	type	  = integer
+	column	  = id
+	generator = native
+
+	[Person.fields.firstName]
+	type	 = string
+	column   = first_name
+	nullable = FALSE
+
+	[Person.fields.lastName]
+	type	 = string
+	column   = first_name
+	nullable = TRUE
+
+	; Example of one-to-many
+
+	[Person.fields.emailAddresses]
+	type   = hasMany
+	target = EmailAddress
+	route  = {
+		"id" : "person"
+	}
+	order  = {
+		"priority" : "asc"
+	}
+
+	; Example of many-to-one
+
+	[Person.fields.team]
+	type   = hasOne
+	target = Team
+	route  = {
+		"team" : "id"
+	}
+
+	; Example of one-to-one
+
+	[Person.fields.user]
+	type   = hasOne
+	target = User
+	unique = TRUE
+	route  = {
+		"id" : "person"
+	}
+
+	; Example of many-to-many
+
+	[Person.fields.groups]
+	type   = hasMany
+	target = Group
+	route  = {
+		"user_groups" : {
+			"id"	: "user",
+			"group" : "id"
+		}
+	}

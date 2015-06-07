@@ -7,6 +7,7 @@ age       = 31
 pi        = 3.14159
 single    = FALSE
 employed  = TRUE
+random    = NULL
 vehicles  = ["2005 Mazda 6"]
 favorites = {
 	"food":  "Indian",
@@ -27,6 +28,9 @@ favorites = {
 		location = "Warwick, RI"
 		gradYear = 2004
 		degree   = "Associates"
+
+; You have to remember that indentation does not matter.  The value below will be appended
+; to person.education.college
 
 multi = This supports multi lines as well so long as they do not look like an INI field.  It
 should be noted however that multiple lines will not retain their line breaks.  New lines will,

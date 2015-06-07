@@ -17,7 +17,7 @@
 			/**
 			 *
 			 */
-			'Person Mapper Example' => function($data, $shared)
+			'Kitchen Sink' => function($data, $shared)
 			{
 				$jin_file = $data['root'] . '/test/resources/kitchen_sink.jin';
 				$contents = file_get_contents($jin_file);
@@ -30,6 +30,7 @@
 				assert(is_float($data['person']['pi']))->equals(TRUE);
 
 				assert($data['person']['education']['level'])->equals('Associates');
+				assert($data['person']['vehicles'])->contains('2005 Mazda 6');
 			}
 		]
 	];
