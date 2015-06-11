@@ -34,9 +34,10 @@
 		 */
 		public function parse($jin_string, $assoc = FALSE)
 		{
-			$collection  = clone $this->collection;
-			$jin_string  = $this->removeWhitespace($jin_string);
-			$jin_string  = $this->removeNewLines($jin_string);
+			$collection = clone $this->collection;
+			$jin_string = $this->removeWhitespace($jin_string);
+			$jin_string = $this->removeNewLines($jin_string);
+			$jin_string = trim($jin_string);
 
 			foreach (parse_ini_string($jin_string, TRUE, INI_SCANNER_RAW) as $index => $values) {
 				foreach ($values as $key => $value) {
