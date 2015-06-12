@@ -88,7 +88,7 @@
 		protected function removeNewLines($string)
 		{
 			return preg_replace(sprintf(
-				'#(^|%s)(?!(\[%s\]|%s\s*=))#',
+				'#(^|%s)(?!(\[%s\]|%s\s*=|;))#',
 				self::REGEX_NEW_LINE,
 				self::REGEX_CATEGORY_IDENTIFIER,
 				self::REGEX_FIELD_IDENTIFIER
