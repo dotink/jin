@@ -35,15 +35,21 @@
 		public function parse($jin_string, $assoc = FALSE)
 		{
 			$collection = clone $this->collection;
+			$jin_string = $this->removeComments($jin_string);
 			$jin_string = $this->removeWhitespace($jin_string);
 			$jin_string = $this->removeNewLines($jin_string);
 			$jin_string = trim($jin_string);
 
 			foreach (parse_ini_string($jin_string, TRUE, INI_SCANNER_RAW) as $index => $values) {
+
+				if (!is_array($values)) {
+					throw new ProgrammerException('');
+				}
+
 				foreach ($values as $key => $value) {
 
-					$leadch = strtolower($value[0]);
 					$length = strlen($value);
+					$leadch = $length ? strtolower($value[0]) : '';
 
 					if (in_array($leadch, ['n', 't', 'f']) && in_array($length, [4, 5])) {
 						if (strtolower($value) == 'null') {
@@ -75,6 +81,22 @@
 			}
 
 			return $collection;
+		}
+
+
+		/**
+		 * Removes all comments
+		 *
+		 * @access protected
+		 * @param string $string The string from which to remove comments
+		 * @return string The string, stripped of comments
+		 */
+		protected function removeComments($string)
+		{
+			return preg_replace(sprintf(
+				'#(^|%s)(;.*)#',
+				self::REGEX_NEW_LINE
+			), '$1', $string);
 		}
 
 
