@@ -41,46 +41,54 @@
 			$jin_string = trim($jin_string);
 
 			foreach (parse_ini_string($jin_string, TRUE, INI_SCANNER_RAW) as $index => $values) {
-
 				if (!is_array($values)) {
-					throw new ProgrammerException('');
-				}
+					$data = $this->parseValue($values, $assoc);
 
-				foreach ($values as $key => $value) {
+				} else {
+					$data = array();
 
-					$length = strlen($value);
-					$leadch = $length ? strtolower($value[0]) : '';
-
-					if (in_array($leadch, ['n', 't', 'f']) && in_array($length, [4, 5])) {
-						if (strtolower($value) == 'null') {
-							$values[$key] = NULL;
-						} elseif (strtolower($value) == 'true') {
-							$values[$key] = TRUE;
-						} elseif (strtolower($value) == 'false') {
-							$values[$key] = FALSE;
-						}
-
-						continue;
-
-					} elseif (in_array($leadch, ['{', '['])) {
-						$values[$key] = json_decode($value, $assoc);
-
-					} elseif (is_numeric($value)) {
-						$values[$key] = json_decode($value);
-					}
-
-					if ($values[$key] === NULL) {
-						throw new Flourish\ProgrammerException(
-							'Error parsing JSON data: %s',
-							$value
-						);
+					foreach ($values as $key => $value) {
+						$data[$key] = $this->parseValue($value, $assoc);
 					}
 				}
 
-				$collection->set($index, $values);
+				$collection->set($index, $data);
 			}
 
 			return $collection;
+		}
+
+
+		/**
+		 *
+		 */
+		protected function parseValue($data, $assoc)
+		{
+			$value  = $data;
+			$length = strlen($data);
+			$leadch = $length ? strtolower($data[0]) : '';
+
+			if (in_array($leadch, ['n', 't', 'f']) && in_array($length, [4, 5])) {
+				if (strtolower($data) == 'null') {
+					$value = NULL;
+				} elseif (strtolower($data) == 'true') {
+					$value = TRUE;
+				} elseif (strtolower($data) == 'false') {
+					$value = FALSE;
+				}
+
+			} elseif (in_array($leadch, ['{', '[', '"']) || is_numeric($data)) {
+				$value = json_decode($data, $assoc);
+
+				if ($value === NULL) {
+					throw new Flourish\ProgrammerException(
+						'Error parsing JSON data: %s',
+						$data
+					);
+				}
+			}
+
+			return $value;
 		}
 
 
@@ -134,3 +142,4 @@
 		}
 	}
 }
+
