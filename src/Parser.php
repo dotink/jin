@@ -102,7 +102,7 @@
 		protected function removeComments($string)
 		{
 			return preg_replace(sprintf(
-				'#(^|%s)(;.*)#',
+				'#(^|%s)(\s*;.*)#',
 				self::REGEX_NEW_LINE
 			), '$1', $string);
 		}
@@ -142,4 +142,3 @@
 		}
 	}
 }
-
