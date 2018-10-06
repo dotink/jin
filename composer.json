@@ -15,7 +15,7 @@
 	},
 	"require": {
 		"php": ">=5.4.0",
-		"dotink/flourish-collection": "^1.1"
+		"adbario/php-dot-notation": "^2.1"
 	},
 	"autoload": {
 		"classmap": ["src/"]

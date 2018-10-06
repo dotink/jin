@@ -1,6 +1,6 @@
 <?php namespace Dotink\Jin
 {
-	use Dotink\Flourish;
+	use Adbar;
 
 	/**
 	 *
@@ -18,9 +18,9 @@
 		 * @access public
 		 * @return void
 		 */
-		public function __construct(Flourish\Collection $collection = NULL)
+		public function __construct(Adbar\Dot $collection = NULL)
 		{
-			$this->collection = $collection ?: new Flourish\Collection();
+			$this->collection = $collection ?: new Adbar\Dot();
 		}
 
 
@@ -52,7 +52,7 @@
 					}
 				}
 
-				$collection->set($index, $data);
+				$collection->merge($index, $data);
 			}
 
 			return $collection;
@@ -81,7 +81,7 @@
 				$value = json_decode($data, $assoc);
 
 				if ($value === NULL) {
-					throw new Flourish\ProgrammerException(
+					throw new \RuntimeException(
 						'Error parsing JSON data: %s',
 						$data
 					);

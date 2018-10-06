@@ -7,9 +7,9 @@
 
 		'setup' => function($data, $shared) {
 			needs($data['root'] . '/src/Parser.php');
-			needs($data['root'] . '/vendor/dotink/flourish-collection/src/Collection.php');
+			needs($data['root'] . '/vendor/adbario/php-dot-notation/src/Dot.php');
 
-			$shared->jin = new Jin\Parser(new Flourish\Collection());
+			$shared->jin = new Jin\Parser();
 		},
 
 		'tests' => [
@@ -23,14 +23,14 @@
 				$contents = file_get_contents($jin_file);
 				$data     = $shared->jin->parse($contents)->get();
 
-				assert(is_array($data))->equals(TRUE);
-				assert(isset($data['person']['education']['level']))->equals(TRUE);
-				assert(is_bool($data['person']['single']))->equals(TRUE);
-				assert(is_int($data['person']['age']))->equals(TRUE);
-				assert(is_float($data['person']['pi']))->equals(TRUE);
+				accept(is_array($data))->equals(TRUE);
+				accept(isset($data['person']['education']['level']))->equals(TRUE);
+				accept(is_bool($data['person']['single']))->equals(TRUE);
+				accept(is_int($data['person']['age']))->equals(TRUE);
+				accept(is_float($data['person']['pi']))->equals(TRUE);
 
-				assert($data['person']['education']['level'])->equals('Associates');
-				assert($data['person']['vehicles'])->contains('2005 Mazda 6');
+				accept($data['person']['education']['level'])->equals('Associates');
+				accept($data['person']['vehicles'])->contains('2005 Mazda 6');
 			}
 		]
 	];
