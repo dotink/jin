@@ -52,7 +52,7 @@
 					}
 				}
 
-				$collection->merge($index, $data);
+				$collection->set($index, $data);
 			}
 
 			return $collection;
