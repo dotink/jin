@@ -81,10 +81,10 @@
 				$value = json_decode($data, $assoc);
 
 				if ($value === NULL) {
-					throw new \RuntimeException(
+					throw new \RuntimeException(sprintf(
 						'Error parsing JSON data: %s',
 						$data
-					);
+					));
 				}
 			}
 
