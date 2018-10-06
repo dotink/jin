@@ -13,8 +13,7 @@ specification.
 ## Basic Usage
 
 ```php
-$collection  = new Dotink\Flourish\Collection();
-$jin_parser  = new Dotink\Jin\Parser($collection);
+$jin_parser  = new Dotink\Jin\Parser();
 
 $config_data = $jin_parser->parse($jin_string)->get();
 ```
@@ -27,7 +26,7 @@ $config_data = $jin_parser->parse($jin_string, TRUE)->get();
 ```
 
 If you'd rather work directly with the collection you can leave off the `get()`.  You can see
-more documentation about the collection at (https://github.com/dotink/flourish-collection):
+more documentation about the collection at (https://github.com/adbario/php-dot-notation):
 
 ```php
 $config = $jin_parser->parse($jin_string, TRUE);
