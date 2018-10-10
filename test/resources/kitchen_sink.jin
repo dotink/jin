@@ -35,3 +35,9 @@ favorites = {
 multi = This supports multi lines as well so long as they do not look like an INI field.  It
 should be noted however that multiple lines will not retain their line breaks.  New lines will,
 instead be separated by a space.
+
+
+test = map(methods, route, target) {
+	["GET","POST"]		"/user/{id}"		SelectUser::test,
+	["GET"]			"/test"			TestController::test
+}

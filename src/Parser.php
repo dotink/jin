@@ -60,6 +60,45 @@
 
 
 		/**
+                 *
+                 */
+		protected function parseMap($keys, $data, $assoc)
+		{
+			$data  = trim($data);
+			$keys  = array_map('trim', explode(',', $keys));
+			$parts = array();
+
+			foreach ($keys as $key) {
+				$parts[] = '(?<' . $key . '>.+?)';
+			}
+
+			$regex = sprintf('/%s(?:,\s|$)/', implode('\s+', $parts));
+
+			if (!preg_match_all($regex, $data, $matches, PREG_SET_ORDER)) {
+				//
+				//
+				//
+			}
+
+			foreach ($matches as $i => $row) {
+				foreach ($row as $column => $value) {
+					if (is_numeric($column)) {
+						unset($matches[$i][$column]);
+					} else {
+						$matches[$i][$column] = $this->parseValue($value, $assoc);
+					}
+				}
+
+				if (!$assoc) {
+					$matches[$i] = (object) $matches[$i];
+				}
+			}
+
+			return $matches;
+		}
+
+
+		/**
 		 *
 		 */
 		protected function parseValue($data, $assoc)
@@ -68,7 +107,10 @@
 			$length = strlen($data);
 			$leadch = $length ? strtolower($data[0]) : '';
 
-			if (in_array($leadch, ['n', 't', 'f']) && in_array($length, [4, 5])) {
+			if (in_array($leadch, ['m']) && preg_match('#map\s*\((?<keys>.+)\)\s*\{(?<data>.*)\}#', $value, $matches)) {
+				$value = $this->parseMap($matches['keys'], $matches['data'], $assoc);
+
+			} elseif (in_array($leadch, ['n', 't', 'f']) && in_array($length, [4, 5])) {
 				if (strtolower($data) == 'null') {
 					$value = NULL;
 				} elseif (strtolower($data) == 'true') {
