@@ -7,6 +7,8 @@
 	 */
 	class Parser
 	{
+		const COLLAPSE_CHARACTER        = "\xC2\xA0";
+		const REGEX_MAP                 = '#map\s*\((?<keys>(?:\n|.)+)\)\s*\{(?<data>(?:\n|.)*)\}#';
 		const REGEX_CATEGORY_IDENTIFIER = '[\\\\a-zA-Z-_.]+';
 		const REGEX_FIELD_IDENTIFIER    = '[a-zA-Z-_]+';
 		const REGEX_NEW_LINE            = '\n';
@@ -40,6 +42,7 @@
 			$jin_string = $this->removeNewLines($jin_string);
 			$jin_string = trim($jin_string);
 
+
 			foreach (parse_ini_string($jin_string, TRUE, INI_SCANNER_RAW) as $index => $values) {
 				if (!is_array($values)) {
 					$data = $this->parseValue($values, $assoc);
@@ -60,72 +63,63 @@
 
 
 		/**
-                 *
-                 */
+		 *
+		 */
 		protected function parseMap($keys, $data, $assoc)
 		{
-			$data  = trim($data);
 			$keys  = array_map('trim', explode(',', $keys));
-			$parts = array();
+			$value = explode("\n", trim($data));
 
-			foreach ($keys as $key) {
-				$parts[] = '(?<' . $key . '>.+?)';
-			}
+			foreach ($value as $i => $row) {
+				$value[$i] = str_getcsv(preg_replace('/\t+/', "\t", rtrim($row, ',')), "\t");
 
-			$regex = sprintf('/%s(?:,\s|$)/', implode('\s+', $parts));
-
-			if (!preg_match_all($regex, $data, $matches, PREG_SET_ORDER)) {
-				//
-				//
-				//
-			}
-
-			foreach ($matches as $i => $row) {
-				foreach ($row as $column => $value) {
-					if (is_numeric($column)) {
-						unset($matches[$i][$column]);
-					} else {
-						$matches[$i][$column] = $this->parseValue($value, $assoc);
-					}
+				if (count($value[$i]) != count($keys)) {
+					throw new \RuntimeException(sprintf(
+						'Error parsing map(), row %s, the number of columns ' .
+						'does not match the number of keys: %s',
+						$i + 1,
+						$row
+					));
 				}
 
-				if (!$assoc) {
-					$matches[$i] = (object) $matches[$i];
+				foreach ($value[$i] as $j => $column) {
+					$value[$i][$j] = $this->parseValue($column, $assoc);
 				}
+
+				$value[$i] = array_combine($keys, $value[$i]);
 			}
 
-			return $matches;
+			return $value;
 		}
 
 
 		/**
 		 *
 		 */
-		protected function parseValue($data, $assoc)
+		protected function parseValue($value, $assoc)
 		{
-			$value  = $data;
-			$length = strlen($data);
-			$leadch = $length ? strtolower($data[0]) : '';
+			$value  = trim(str_replace(static::COLLAPSE_CHARACTER, "\n", $value));
+			$leadch = ($length = strlen($value)) ? strtolower($value[0]) : '';
 
-			if (in_array($leadch, ['m']) && preg_match('#map\s*\((?<keys>.+)\)\s*\{(?<data>.*)\}#', $value, $matches)) {
+			if (in_array($leadch, ['m']) && preg_match(static::REGEX_MAP, $value, $matches)) {
 				$value = $this->parseMap($matches['keys'], $matches['data'], $assoc);
 
 			} elseif (in_array($leadch, ['n', 't', 'f']) && in_array($length, [4, 5])) {
-				if (strtolower($data) == 'null') {
+				if (strtolower($value) == 'null') {
 					$value = NULL;
-				} elseif (strtolower($data) == 'true') {
+				} elseif (strtolower($value) == 'true') {
 					$value = TRUE;
-				} elseif (strtolower($data) == 'false') {
+				} elseif (strtolower($value) == 'false') {
 					$value = FALSE;
 				}
 
-			} elseif (in_array($leadch, ['{', '[', '"']) || is_numeric($data)) {
-				$value = json_decode($data, $assoc);
+			} elseif (in_array($leadch, ['{', '[', '"']) || is_numeric($value)) {
+				$value = json_decode($value, $assoc);
 
 				if ($value === NULL) {
 					throw new \RuntimeException(sprintf(
 						'Error parsing JSON data: %s',
-						$data
+						$value
 					));
 				}
 			}
@@ -164,7 +158,7 @@
 				self::REGEX_NEW_LINE,
 				self::REGEX_CATEGORY_IDENTIFIER,
 				self::REGEX_FIELD_IDENTIFIER
-			), ' $2', $string);
+			), static::COLLAPSE_CHARACTER . '$2', $string); // replace with non-breaking space
 		}
 
 		/**
