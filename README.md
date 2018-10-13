@@ -43,45 +43,45 @@ $config = $jin_parser->parse($jin_string);
 
 ### A Simple Field
 
-```toml
+```js
 field = value ; INI style string
 ```
 
 Strings don't have to be quoted, but can be:
 
-```toml
+```js
 field = "value" ; JSON style string
 ```
 
 Integers are converted to the proper type automatically:
 
-```toml
+```js
 integerValue = 1
 ```
 
 Floats too...
 
-```toml
+```js
 floatValue = 1.03
 ```
 
 Booleans and NULL values are case insensitive:
 
-```toml
+```js
 boolValue = false
 ```
 
-```toml
+```js
 boolValue = TRUE
 ```
 
-```toml
+```js
 nullValue = NULL
 ```
 
 ### Multi-Line Text
 
-```toml
+```js
 multi = JIN supports multi-line values until the new line resembles
 an INI database structure.  So, for example, this line would be parsed
 with new lines preserved until `foo=bar` or `[section]` or `\n\n`.
@@ -91,7 +91,7 @@ with new lines preserved until `foo=bar` or `[section]` or `\n\n`.
 
 Comments are allowed anywhere in a value, so it is important to keep in mind that anything after an `;` character is going to be cut off.
 
-```toml
+```js
 field = "This probably does not do what you expect; this is stripped"
 ```
 
@@ -99,19 +99,19 @@ field = "This probably does not do what you expect; this is stripped"
 
 Arrays are defined literally:
 
-```toml
+```js
 favoriteFoods = ["Tacos", "Sushi", "Curry"]
 ```
 
 Objects are also defined literally too:
 
-```toml
+```js
 favorites = {"food":  "Indian", "music": "Classic Rock"}
 ```
 
 Both can span multiple lines and contain comments:
 
-```toml
+```js
 multiFoods = [
 	"Tacos",
 	"Sushi", ; Most keto friendly
@@ -132,7 +132,7 @@ multiFavorites = {
 
 Although values can be JSON-like, they are not, strictly speaking, JSON.  The major difference is that they do not support JSON's built in escaped characters, so you cannot use `\n` or `\t`.  On the bright side, you do not need to escape a backslash:
 
-```toml
+```js
 middlewares = [
 	"App\Middleware\ResponseHandler"
 ]
@@ -142,7 +142,7 @@ middlewares = [
 
 Sections provide an alternative to JSON object structures.  Note, sections are never parsed as `stdClass` objects, but will always return associative arrays.
 
-```toml
+```js
 [category]
 
 	fieldOne   = valueOne
@@ -160,7 +160,7 @@ You can add sub-sections by separating the previous category name by a dot.  Thi
 useful for keyed configuration values with repeating data, for example, imagine a database config
 with multiple aliases connections:
 
-```toml
+```js
 [database]
 
 	[database.connections.default]
@@ -180,7 +180,7 @@ with multiple aliases connections:
 
 You can reference a parent section for shorter section names.
 
-```toml
+```js
 [database]
 
 	[&.connections.default]
@@ -191,7 +191,7 @@ You can reference a parent section for shorter section names.
 
 References can be stacked to refer to sub-sub-sections.  Reference stacking always begins from the last section defined without a reference:
 
-```toml
+```js
 [database]
 
 	[&.connections]
@@ -210,13 +210,13 @@ References can be stacked to refer to sub-sub-sections.  Reference stacking alwa
 
 You can get values from the environment.
 
-```toml
+```js
 envField = env(DEBUGGING)
 ```
 
 And provide defaults when they are not set:
 
-```toml
+```js
 envField = env(DEBUGGING, TRUE)
 ```
 
@@ -224,7 +224,7 @@ envField = env(DEBUGGING, TRUE)
 
 You can use native language functions (in this implementation, PHP):
 
-```toml
+```js
 runField = run(md5('hash this thing'))
 ```
 
@@ -238,7 +238,7 @@ $jin_parser  = new Dotink\Jin\Parser([
 
 Then access/use them as you'd expect:
 
-```toml
+```js
 cacheDirectory = run($app->getDirectory('storage/cache', TRUE))
 ```
 
@@ -246,7 +246,7 @@ cacheDirectory = run($app->getDirectory('storage/cache', TRUE))
 
 Templates provide a powerful way to duplciate complex data structures with different values:
 
-```toml
+```js
 [database]
 
 	settings = def(type, name, host, user, pass) {
@@ -280,7 +280,7 @@ Templates provide a powerful way to duplciate complex data structures with diffe
 
 Templates can also be used to create arrays of non-keyed objects:
 
-```toml
+```js
 [routing]
 
 	route = def(methods, pattern, target) {
