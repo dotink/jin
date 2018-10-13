@@ -1,0 +1,63 @@
+simpleValue  = value
+quotedValue  = "value"
+intValue     = 1
+floatValue   = 1.03
+boolValue    = true
+upBoolValue  = TRUE
+nullValue    = null
+upNullValue  = null
+envValue     = env(VALUE, FALSE)
+runValue     = run(md5('value'))
+comValue     = This value is commented ; So this should not be seen
+multiValue   = This is multiple lines of text.  Line endings should be
+preserved until `foo=bar` or `[section]` or `\n\n`.
+
+[complex]
+
+	;
+	; More complex JSON-like values
+	;
+
+	arrayValue   = ["value1", "value2"]
+	objectValue  = {"value": "value"}
+	complexValue = {
+		;
+		; Comment
+		;
+
+		"arrayValue": [
+			"value1", ; Inline Comment
+			"value2"
+		]
+	}
+
+	;
+	; Templates
+	;
+
+	template = def(value1, value2) {
+		{
+			"value1": $value1,
+			"value2": $value2
+		}
+	}
+
+	include = inc(complex.template) {
+		1
+
+		;
+		; Comment
+		;
+
+		2 ; Inline Comment
+	}
+
+	mapping = map(complex.template) {
+		1	2
+
+		;
+		; Comment
+		;
+
+		3	env(VALUE) ; Inline Comment
+	}

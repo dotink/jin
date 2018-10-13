@@ -16,11 +16,22 @@
 	</tr>
 	
 	<tr>
-		<td>Flourish</td>
-		<td>Dotink\Flourish</td>
+		<td>Adbar</td>
+		<td>Adbar</td>
 	</tr>
 	
 </table>
+
+## Properties
+
+### Instance Properties
+#### <span style="color:#6a6e3d;">$collection</span>
+
+#### <span style="color:#6a6e3d;">$context</span>
+
+#### <span style="color:#6a6e3d;">$data</span>
+
+
 
 
 ## Methods
@@ -103,6 +114,82 @@ Parse a Jin string
 		</dd>
 	
 </dl>
+
+
+<hr />
+
+#### <span style="color:#3e6a6e;">parseEnv()</span>
+
+
+<hr />
+
+#### <span style="color:#3e6a6e;">parseInc()</span>
+
+
+<hr />
+
+#### <span style="color:#3e6a6e;">parseMap()</span>
+
+
+<hr />
+
+#### <span style="color:#3e6a6e;">parseRun()</span>
+
+
+<hr />
+
+#### <span style="color:#3e6a6e;">parseValue()</span>
+
+
+<hr />
+
+#### <span style="color:#3e6a6e;">removeComments()</span>
+
+Removes all comments
+
+###### Parameters
+
+<table>
+	<thead>
+		<th>Name</th>
+		<th>Type(s)</th>
+		<th>Description</th>
+	</thead>
+	<tbody>
+			
+		<tr>
+			<td>
+				$string
+			</td>
+			<td>
+									<a href="http://php.net/language.types.string">string</a>
+				
+			</td>
+			<td>
+				The string from which to remove comments
+			</td>
+		</tr>
+			
+	</tbody>
+</table>
+
+###### Returns
+
+<dl>
+	
+		<dt>
+			string
+		</dt>
+		<dd>
+			The string, stripped of comments
+		</dd>
+	
+</dl>
+
+
+<hr />
+
+#### <span style="color:#3e6a6e;">removeReferences()</span>
 
 
 <hr />

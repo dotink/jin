@@ -1,4 +1,4 @@
-title  = "Jin Could Make a Good YAML Replacement for Static Blog Generators"
+title  = "Jin Could Make a Good toml Replacement for Static Blog Generators"
 posted = TRUE
 date   = 2015-06-06 20:39:00
-tags   = ['configurations', 'languages', 'yaml']
+tags   = ['configurations', 'languages', 'toml']

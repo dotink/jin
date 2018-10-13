@@ -1,14 +1,22 @@
-Jin - Jsonified Ini Notation
+JIN - Jsonified Ini Notation
 =====
 
-Jin is INI files which supports JSON values.
+JIN is INI files which supports JSON-like values.
 
 It is a simple and informal configuration language which can be used for all sorts of purposes.
 It works best as a metaconfiguration or schema configuration as it is extremely good for repeated
 blocks of data that need to be keyed differently.
 
 In some ways it is similar to TOML (https://github.com/toml-lang/toml), but does not have a formal
-specification.
+specification.  Parsing rules can best be described as follows:
+
+- File structure is that of an INI file
+	- key = value
+	- [section]
+	- ; comment
+- Values are JSON-like with the following differences
+	- Escaped character, e.g. \n, \b, \t are not supported
+	- A single \ does not need to be escaped
 
 ## Basic Usage
 
@@ -18,232 +26,300 @@ $jin_parser  = new Dotink\Jin\Parser();
 $config_data = $jin_parser->parse($jin_string)->get();
 ```
 
-You can make turn `stdClass` objects in parsed JSON into additional associative arrays by
-passing `TRUE` as the second parameter:
+You can preserve `stdClass` objects in parsed JSON by passing FALSE to the second parameter:
 
 ```php
-$config_data = $jin_parser->parse($jin_string, TRUE)->get();
+$config_data = $jin_parser->parse($jin_string, FALSE)->get();
 ```
 
 If you'd rather work directly with the collection you can leave off the `get()`.  You can see
 more documentation about the collection at (https://github.com/adbario/php-dot-notation):
 
 ```php
-$config = $jin_parser->parse($jin_string, TRUE);
+$config = $jin_parser->parse($jin_string);
 ```
 
 ## The Language
 
 ### A Simple Field
 
-```yaml
-field = value
+```toml
+field = value ; INI style string
 ```
 
 Strings don't have to be quoted, but can be:
 
-```yaml
-field = "value"
+```toml
+field = "value" ; JSON style string
 ```
 
 Integers are converted to the proper type automatically:
 
-```yaml
+```toml
 integerValue = 1
 ```
 
 Floats too...
 
-```yaml
+```toml
 floatValue = 1.03
 ```
 
 Booleans and NULL values are case insensitive:
 
-```yaml
+```toml
 boolValue = false
 ```
 
-```yaml
+```toml
 boolValue = TRUE
 ```
 
-```yaml
+```toml
 nullValue = NULL
 ```
 
 ### Multi-Line Text
 
-```yaml
-multi = Jin supports multi lines as well so long as they do not look like an
-INI field.  It should be noted however that multiple lines will not retain their
-line breaks.  New lines will, instead be separated by a space.
+```toml
+multi = JIN supports multi-line values until the new line resembles
+an INI database structure.  So, for example, this line would be parsed
+with new lines preserved until `foo=bar` or `[section]` or `\n\n`.
 ```
 
-### JSON Structures
+### Comments
+
+Comments are allowed anywhere in a value, so it is important to keep in mind that anything after an `;` character is going to be cut off.
+
+```toml
+field = "This probably does not do what you expect; this is stripped"
+```
+
+### JSON-like Values
 
 Arrays are defined literally:
 
-```yaml
+```toml
 favoriteFoods = ["Tacos", "Sushi", "Curry"]
 ```
 
-Objects are also defined literally and can span multiple lines:
+Objects are also defined literally too:
 
-```yaml
-favorites = {
-	"food":  "Indian",
-	"music": "Classic Rock"
+```toml
+favorites = {"food":  "Indian", "music": "Classic Rock"}
+```
+
+Both can span multiple lines and contain comments:
+
+```toml
+multiFoods = [
+	"Tacos",
+	"Sushi", ; Most keto friendly
+	"Curry"
+]
+
+multiFavorites = {
+	;
+	; The basics
+	;
+
+	"food": "Tacos",
+	"music": "Classic Rock" ; Not actually my favorite
 }
 ```
 
-### Categories
+#### Differences
 
-Categories are an alternative to object structures.  While objects (by default) in JSON notation
-will result in `stdClass` objects, categories will be associative arrays.  It is recommended that
-categories be used when the fields represent a well defined schema, and JSON objects be used for
-what amounts to user supplied data.
+Although values can be JSON-like, they are not, strictly speaking, JSON.  The major difference is that they do not support JSON's built in escaped characters, so you cannot use `\n` or `\t`.  On the bright side, you do not need to escape a backslash:
 
-```yaml
+```toml
+middlewares = [
+	"App\Middleware\ResponseHandler"
+]
+```
+
+### Sections
+
+Sections provide an alternative to JSON object structures.  Note, sections are never parsed as `stdClass` objects, but will always return associative arrays.
+
+```toml
 [category]
-fieldOne   = valueOne
-fieldTwo   = valueTwo
-fieldThree = 1
-fieldFour  = [0, 7, 9, 13]
-fieldFive  = {
-	"foo": "bar"
-}
+
+	fieldOne   = valueOne
+	fieldTwo   = valueTwo
+	fieldThree = 1
+	fieldFour  = [0, 7, 9, 13]
+	fieldFive  = {
+		"foo": "bar"
+	}
 ```
 
-### Sub Categories
+### Sub-Sections
 
-You can add subcategories by separating the previous category name by a dot.  This is extremely
+You can add sub-sections by separating the previous category name by a dot.  This is extremely
 useful for keyed configuration values with repeating data, for example, imagine a database config
 with multiple aliases connections:
 
-```yaml
+```toml
 [database]
 
 	[database.connections.default]
-	driver = pgsql
-	dbname = website
-	host   = localhost
+		driver = pgsql
+		dbname = website
+		host   = localhost
 
 	[database.connections.forums]
-	driver = mysql
-	dbname = forums
-	host   = localhost
-	user   = web
-	pass   = 3ch0th3w4lRUS
+		driver = mysql
+		dbname = forums
+		host   = localhost
+		user   = web
+		pass   = 3ch0th3w4lRUS
 ```
 
-**Note: The leading whitespace does not matter and can be tabs or spaces**
+### Section References
+
+You can reference a parent section for shorter section names.
+
+```toml
+[database]
+
+	[&.connections.default]
+		driver = pgsql
+		dbname = website
+		host   = localhost
+```
+
+References can be stacked to refer to sub-sub-sections.  Reference stacking always begins from the last section defined without a reference:
+
+```toml
+[database]
+
+	[&.connections]
+
+		;
+		; This section contains all of our database connections
+		;
+
+		[&&.default]
+			driver = pgsql
+			dbname = website
+			host   = localhost
+```
+
+## Environment Variables
+
+You can get values from the environment.
+
+```toml
+envField = env(DEBUGGING)
+```
+
+And provide defaults when they are not set:
+
+```toml
+envField = env(DEBUGGING, TRUE)
+```
+
+## Native Language Values
+
+You can use native language functions (in this implementation, PHP):
+
+```toml
+runField = run(md5('hash this thing'))
+```
+
+You can add context to the parser for access to variables as well:
+
+```php
+$jin_parser  = new Dotink\Jin\Parser([
+	'app' => $app
+]);
+```
+
+Then access/use them as you'd expect:
+
+```toml
+cacheDirectory = run($app->getDirectory('storage/cache', TRUE))
+```
+
+### Templates
+
+Templates provide a powerful way to duplciate complex data structures with different values:
+
+```toml
+[database]
+
+	settings = def(type, name, host, user, pass) {
+		{
+			"type": $type,
+			"name": $name,
+			"host": $host,
+			"auth": {
+				"user": $user,
+				"pass": $pass
+			}
+		}
+	}
+
+	[&.connections]
+
+		default = inc(database.settings) {
+			pgsql
+			my_database
+			localhost
+
+			;
+			; Do not be afraid to use any valid value where values are
+			; specified
+			;
+
+			env(DB_USER, web)
+			env(DB_PASS, NULL)
+		}
+```
+
+Templates can also be used to create arrays of non-keyed objects:
+
+```toml
+[routing]
+
+	route = def(methods, pattern, target) {
+		{
+			"methods": $methods,
+			"pattern": $pattern,
+			"target": $target
+		}
+	}
+
+	;
+	; The map function takes a tab separated list of values.  Multiple tabs
+	; are reduced to one before parsing.
+	;
+
+	routes = map(routing.route) {
+		["GET"]		/				ViewHome
+		["GET"]		/articles		ListArticles
+		["POST"]	/articles		CreateArticle
+		["GET"]		/articles/{id}	ViewArticle
+		["POST"]	/articles/{id}	EditArticle
+	}
+
+```
+
+## Testing
+
+```
+php vendor/bin/phpunit --bootstrap vendor/autoload.php test/routines/
+```
 
 ## Addendum
 
-Jin was written primarily as a way to configure a data mapper ORM.  While it should serve a lot
-of configuration needs well, since there is no formalized spec, strange edge cases may be
-possible.
+JIN was originally written as a way to configure a data mapper ORM.  It is a very flexible and intuitive language, but it may not make sense in all cases.  It is strongly recommended that if you are using it for frequently accessed configurations (like during runtime) that you serialize and cache the resulting collection rather than parsing it on every load.
 
-Keep in Mind:
+### Editor Support
 
-- Category identifiers SHOULD only contain `a-z`, `A-Z`, `.`, `\`, `-`, and `_`
-- Field identifiers SHOULD only contain `a-z`, `A-Z`, `-` and `_`
-- JSON can span multiple lines, line breaks in content or comments are a no-No!
-
-The basic transformation algorithm is rather simple, so feel free to look at the source if you're
-running into a particular bug.  Although we will entertain new features or additional
-formalization, please keep in mind that this is designed with informality in mind.
-
-### Kitchen Sink Example
-
-```clojure
-[person]
-firstName = "Matthew"
-lastName  = "Sahagian"
-location  = "Silicon Valley, CA"
-email     = "msahagian@dotink.org"
-age       = 31
-pi        = 3.14159
-single    = FALSE
-employed  = TRUE
-vehicles  = ["2005 Mazda 6"]
-favorites = {
-	"food":  "Indian",
-	"hobby": "Homebrew",
-	"music": "Classic Rock"
-}
-
-	[person.education]
-	level = "Associates"
-
-		[person.education.highschool]
-		name     = "Bellingham Memorial High School"
-		location = "Bellingham, MA"
-		gradYear = 2002
-
-		[person.education.college]
-		name     = "New England Institute of Technology"
-		location = "Warwick, RI"
-		gradYear = 2004
-		degree   = "Associates"
-```
-
-#### Outputted Array
-
-```
-Array
-(
-	[person] => Array
-		(
-			[firstName] => Matthew
-			[lastName] => Sahagian
-			[location] => Silicon Valley, CA
-			[email] => msahagian@dotink.org
-			[age] => 31
-			[pi] => 3.14159
-			[single] =>
-			[employed] => 1
-			[vehicles] => Array
-				(
-					[0] => 2005 Mazda 6
-				)
-
-			[favorites] => stdClass Object
-				(
-					[food] => Indian
-					[hobby] => Homebrew
-					[music] => Classic Rock
-				)
-
-			[education] => Array
-				(
-					[level] => Associates
-					[highschool] => Array
-						(
-							[name] => Bellingham Memorial High School
-							[location] => Bellingham, MA
-							[gradYear] => 2002
-						)
-
-					[college] => Array
-						(
-							[name] => New England Institute of Technology
-							[location] => Warwick, RI
-							[gradYear] => 2004
-							[degree] => Associates
-						)
-				)
-		)
-)
-```
-
-
-## Editor Support
-
-There is a hobbled together grammar file for Atom which can be found here: 
+There is a hobbled together grammar file for Atom which can be found here:
 
 https://github.com/dotink/atom-language-jin
 
-For other editors, I've noticed that Javascript highlighting tends to look pretty good with
-the exception of INI comments.
+Because of its similarity to TOML, TOML syntax highlighting also tends to look well.  You can alternatively try JS/JSON syntax highlighting, but your mileage may vary depending on syntax highlighting implementations.
