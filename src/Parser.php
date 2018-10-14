@@ -9,8 +9,8 @@
 	{
 		const COLLAPSE_CHARACTER        = "\xC2\xA0";
 		const REGEX_STRUCTURE           = '#^(?<type>[a-z]+)\s*\((?<args>(?:\n|.)*)\)\s*(?:\{(?<body>(?:\n|.)*)\})?$#';
-		const REGEX_CATEGORY_IDENTIFIER = '[\\\\\\/a-zA-Z-_.&]+';
-		const REGEX_FIELD_IDENTIFIER    = '[a-zA-Z-_]+';
+		const REGEX_CATEGORY_IDENTIFIER = '[\\\\\\/a-zA-Z0-9-_.&]+';
+		const REGEX_FIELD_IDENTIFIER    = '[a-zA-Z0-9-_]+';
 		const REGEX_NEW_LINE            = '\n';
 		const REGEX_WHITESPACE          = '\t|\s';
 
