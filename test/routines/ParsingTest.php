@@ -91,4 +91,17 @@ final class ParsingTest extends TestCase
 			$this->objData->get('complex.mapping')[0]->value2
 		);
 	}
+
+	public function testReference()
+	{
+		$this->assertSame(
+			'value',
+			$this->arrayData->get('reference.sub1.sub1.simpleValue')
+		);
+
+		$this->assertSame(
+			'value',
+			$this->arrayData->get('reference.sub2.simpleValue')
+		);
+	}
 }

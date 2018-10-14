@@ -61,3 +61,21 @@ preserved until `foo=bar` or `[section]` or `\n\n`.
 
 		3	env(VALUE) ; Inline Comment
 	}
+
+[reference]
+
+	;
+	; ....
+	;
+
+	[&.sub1]
+
+		simpleValue = value
+
+		[&&.sub1]
+
+			simpleValue = value
+
+	[&.sub2]
+
+		simpleValue = value
