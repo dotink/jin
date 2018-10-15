@@ -21,22 +21,34 @@ specification.  Parsing rules can best be described as follows:
 ## Basic Usage
 
 ```php
-$jin_parser  = new Dotink\Jin\Parser();
-
+$jin_parser  = new Dotink\Jin\Parser()
+$jin_string  = file_get_contents('config.jin');
 $config_data = $jin_parser->parse($jin_string)->get();
 ```
 
-You can preserve `stdClass` objects in parsed JSON by passing FALSE to the second parameter:
+Calling `get()` on the collection will return the full parsed data as an associative array.
 
-```php
-$config_data = $jin_parser->parse($jin_string, FALSE)->get();
-```
-
-If you'd rather work directly with the collection you can leave off the `get()`.  You can see
-more documentation about the collection at (https://github.com/adbario/php-dot-notation):
+If you'd rather work directly with the collection you can leave off the `get()`. You can see more documentation about the collection at (https://github.com/adbario/php-dot-notation):
 
 ```php
 $config = $jin_parser->parse($jin_string);
+```
+
+Using the collection directly will allow you to use the "dot notation" to reference and retrieve specific values, as well as to supply defaults if they don't exist:
+
+```php
+$config->get('database.connections.default', [
+	'name' => 'website',
+	'host' => 'localhost',
+	'user' => 'web',
+	'pass' => '3ch0th3w4lRUS'
+]);
+```
+
+You can, additionally, preserve `stdClass` objects in parsed JSON by passing FALSE to the second parameter:
+
+```php
+$config_data = $jin_parser->parse($jin_string, FALSE)->get();
 ```
 
 ## The Language
@@ -297,9 +309,9 @@ Templates can also be used to create arrays of non-keyed objects:
 	;
 
 	routes = map(routing.route) {
-		["GET"]		/				ViewHome
-		["GET"]		/articles		ListArticles
-		["POST"]	/articles		CreateArticle
+		["GET"]		/		ViewHome
+		["GET"]		/articles	ListArticles
+		["POST"]	/articles	CreateArticle
 		["GET"]		/articles/{id}	ViewArticle
 		["POST"]	/articles/{id}	EditArticle
 	}
