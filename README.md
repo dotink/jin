@@ -1,14 +1,11 @@
 JIN - Jsonified Ini Notation
 =====
 
-JIN is INI files which supports JSON-like values.
+JIN is data format which uses the structure of an INI file with JSON-like values.
 
-It is a simple and informal configuration language which can be used for all sorts of purposes.
-It works best as a metaconfiguration or schema configuration as it is extremely good for repeated
-blocks of data that need to be keyed differently.
+It is a simple and informal language which is most suitable for confgiruation data and settings.  It works best as a metaconfiguration or schema configuration of sorts, but can also just give rich type and object support to something as simple as a `.env` file.
 
-In some ways it is similar to TOML (https://github.com/toml-lang/toml), but does not have a formal
-specification.  Parsing rules can best be described as follows:
+In some ways it is similar to TOML (https://github.com/toml-lang/toml), but does not have a formal specification.  Parsing rules can best be described as follows:
 
 - File structure is that of an INI file
 	- key = value
