@@ -155,7 +155,11 @@
 
 				foreach ($data as $j => $value) {
 					$value = $this->parseValue(NULL, $value, $assoc);
-					$json  = str_replace('$' . $map['args'][$j], json_encode($value), $json);
+					$json  = str_replace(
+						'$' . $map['args'][$j],
+						json_encode($value, JSON_UNESCAPED_SLASHES),
+						$json
+					);
 				}
 
 				$values[$i] = $this->parseValue(NULL, $json, $assoc);
