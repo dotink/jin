@@ -214,6 +214,15 @@
 				if (!is_numeric($value)) {
 					$value = str_replace('\\\\', '\\', $value);
 					$value = str_replace('\\', '\\\\', $value);
+
+				} elseif ($leadch == '0') {
+					if ($value[1] == 'x') {
+						$value = hdexdec($value);
+					} elseif ($value[1] == 'b') {
+						$value = bindec($value);
+					} else {
+						$value = octdec($value);
+					}
 				}
 
 				$value = json_decode($value, $assoc);
