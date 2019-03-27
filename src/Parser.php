@@ -157,12 +157,18 @@ class Parser
 		$values = explode("\n", trim($body));
 
 		foreach ($values as $i => $row) {
+			$row  = trim(rtrim($row, ','), "\t");
+
+			if (!$row) {
+				continue;
+			}
+
+			$data = str_getcsv(preg_replace('/\t+/', "\t", $row), "\t");
 			$json = $map['body'];
-			$data = str_getcsv(preg_replace('/\t+/', "\t", rtrim($row, ',')), "\t");
 
 			if (count($data) != count($map['args'])) {
 				throw new \RuntimeException(sprintf(
-					'Error parsing inc(), row %s, the number of values does not match the ' .
+					'Error parsing map(), row %s, the number of values does not match the ' .
 					'the number of map arguments: %s',
 					$i + 1,
 					$row
@@ -181,7 +187,7 @@ class Parser
 			$values[$i] = $this->parseValue(NULL, $json, $assoc);
 		}
 
-		return $values;
+		return array_filter($values);
 	}
 
 
