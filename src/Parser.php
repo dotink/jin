@@ -30,7 +30,19 @@ class Parser
 	/**
 	 *
 	 */
+	protected $index = NULL;
+
+
+	/**
+	 *
+	 */
 	protected $data = NULL;
+
+
+	/**
+	 *
+	 */
+	protected $templates = array();
 
 
 	/**
@@ -42,6 +54,7 @@ class Parser
 	public function __construct(array $context = [])
 	{
 		$this->collection = new Collection();
+		$this->templates  = new Collection();
 		$this->context    = $context;
 	}
 
@@ -64,17 +77,18 @@ class Parser
 		$jin_string = trim($jin_string);
 
 		foreach (parse_ini_string($jin_string, TRUE, INI_SCANNER_RAW) as $index => $values) {
+			$this->index = $index;
+
 			if (!is_array($values)) {
-				$this->data->set($index, $this->parseValue(NULL, $values, $assoc));
+				$this->data->set($this->index, $this->parseValue(NULL, $values, $assoc));
 
 			} else {
-				$this->data->set($index, array());
+				$this->data->set($this->index, array());
 
 				foreach ($values as $key => $value) {
-					$this->data->set(
-						$index . '.' . $key,
-						$this->parseValue(NULL, $value, $assoc)
-					);
+					$this->index = $index . '.' . $key;
+
+					$this->data->set($this->index, $this->parseValue(NULL, $value, $assoc));
 				}
 			}
 		}
@@ -88,10 +102,12 @@ class Parser
 	 */
 	protected function parseDef($args, $body, $assoc)
 	{
-		return [
+		$this->templates->set($this->index, [
 			'args' => array_map('trim', explode(',', $args)),
 			'body' => trim($body)
-		];
+		]);
+
+		return 'def(' . $this->index . ')';
 	}
 
 
@@ -120,7 +136,7 @@ class Parser
 	 */
 	protected function parseInc($args, $body, $assoc)
 	{
-		$map    = $this->data->get(trim($args));
+		$map    = $this->templates->get(trim($args));
 		$values = explode("\n", trim($body));
 		$json   = $map['body'];
 
@@ -137,7 +153,7 @@ class Parser
 	 */
 	protected function parseMap($args, $body, $assoc)
 	{
-		$map    = $this->data->get(trim($args));
+		$map    = $this->templates->get(trim($args));
 		$values = explode("\n", trim($body));
 
 		foreach ($values as $i => $row) {
