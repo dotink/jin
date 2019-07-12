@@ -65,7 +65,7 @@ class Parser
 	 * @acces public
 	 * @param string $jin_string The Jin string to parse
 	 * @param boolean $assoc Whether JSON objects should be associative arrays
-	 * @return array The parsed Jin string as an associative array
+	 * @return Collection The parsed Jin string as a Collection
 	 */
 	public function parse($jin_string, $assoc = TRUE)
 	{
