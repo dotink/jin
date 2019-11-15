@@ -251,6 +251,26 @@ Then access/use them as you'd expect:
 cacheDirectory = run($app->getDirectory('storage/cache', TRUE))
 ```
 
+## Custom Functions
+
+You can add custom functions by passing an array of callables keyed by the function name as the second parameter to the parser:
+
+```php
+$jin_parser  = new Dotink\Jin\Parser([], [
+	'hello' => function($name) {
+		return 'Hello ' . $name;
+	}
+]);
+```
+
+Then use them as you'd expect.
+
+```js
+hello = hello(Matt)
+```
+
+Note, you can overload the `env()` function, however, reserved structures such as `map()`, `def()`, `inc` will not work.
+
 ### Templates
 
 Templates provide a powerful way to duplciate complex data structures with different values:

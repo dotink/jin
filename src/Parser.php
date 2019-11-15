@@ -24,7 +24,13 @@ class Parser
 	/**
 	 *
 	 */
-	protected $context = NULL;
+	protected $context = array();
+
+
+	/**
+	 *
+	 */
+	protected $functions = array();
 
 
 	/**
@@ -51,11 +57,29 @@ class Parser
 	 * @access public
 	 * @return void
 	 */
-	public function __construct(array $context = [])
+	public function __construct(array $context = [], array $functions = [])
 	{
-		$this->collection = new Collection();
-		$this->templates  = new Collection();
-		$this->context    = $context;
+		$this->collection  = new Collection();
+		$this->templates   = new Collection();
+		$builtin_functions = [
+			'env' => [$this, 'env'],
+			'run' => [$this, 'exec']
+		];
+
+		foreach ($context as $name => $value) {
+			$this->context[strtolower($name)] = $value;
+		}
+
+		foreach ($functions + $builtin_functions as $name => $value) {
+			if (!is_callable($value)) {
+				throw new \RuntimeException(
+					'Cannot register function "%s", must map to callable',
+					$name
+				);
+			}
+
+			$this->functions[strtolower($name)] = $value;
+		}
 	}
 
 
@@ -99,6 +123,52 @@ class Parser
 
 	/**
 	 *
+	 *
+	 */
+	public function env($name, $default = NULL)
+	{
+		return getenv($name) !== FALSE
+			? getenv($name)
+			: $default;
+	}
+
+
+	/**
+	 *
+	 */
+	protected function exec($php)
+	{
+		extract($this->context);
+
+		return eval("return $php;");
+	}
+
+
+	/**
+	 *
+	 */
+	protected function parseCall($type, $args, $assoc)
+	{
+		$type = strtolower($type);
+
+		if (!isset($this->functions[$type])) {
+			throw new \RuntimeException(sprintf(
+				'Unable to call configuration function "%s", no such function registered',
+				$type
+			));
+		}
+
+		return $this->functions[$type](...array_map(
+			function($arg) use ($assoc) {
+				return $this->parseValue(NULL, trim($arg), $assoc);
+			},
+			explode(',', $args)
+		));
+	}
+
+
+	/**
+	 *
 	 */
 	protected function parseDef($args, $body, $assoc)
 	{
@@ -108,26 +178,6 @@ class Parser
 		]);
 
 		return 'def(' . $this->index . ')';
-	}
-
-
-	/**
-	 *
-	 */
-	protected function parseEnv($args, $body, $assoc)
-	{
-		//
-		// validate
-		//
-
-		$args    = array_map('trim', explode(',', $args));
-		$default = $args[1] ?? NULL;
-		$varname = $args[0];
-		$value   = getenv($varname);
-
-		return $value === FALSE
-			? $this->parseValue(NULL, $default, $assoc)
-			: $value;
 	}
 
 
@@ -194,17 +244,6 @@ class Parser
 	/**
 	 *
 	 */
-	protected function parseRun($args, $body, $assoc)
-	{
-		extract($this->context);
-
-		return eval("return $args;");
-	}
-
-
-	/**
-	 *
-	 */
 	protected function parseValue($args, $body, $assoc)
 	{
 		$value  = trim(str_replace(static::COLLAPSE_CHARACTER, "\n", $body));
@@ -213,15 +252,11 @@ class Parser
 		if (preg_match(static::REGEX_STRUCTURE, $value, $matches)) {
 			$method = 'parse' . $matches['type'];
 
-			if (!is_callable([$this, $method])) {
-				throw new \RuntimeException(sprintf(
-					'Invalid structure %s used: %s',
-					$matches['type'],
-					$matches['body']
-				));
+			if (strtolower($method) !== 'parsecall' && is_callable([$this, $method])) {
+				$value = $this->$method($matches['args'] ?? NULL, $matches['body'] ?? NULL, $assoc);
+			} else {
+				$value = $this->parseCall($matches['type'], $matches['args'] ?? NULL, $assoc);
 			}
-
-			$value = $this->$method($matches['args'] ?? NULL, $matches['body'] ?? NULL, $assoc);
 
 		} elseif (in_array($leadch, ['n', 't', 'f']) && in_array($length, [4, 5])) {
 			if (strtolower($value) == 'null') {

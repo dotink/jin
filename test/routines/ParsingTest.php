@@ -6,10 +6,18 @@ final class ParsingTest extends TestCase
 {
 	public function setUp()
 	{
+		putenv('FOOBAR=foo');
 		putenv('VALUE=value');
 
 		$sample_file       = file_get_contents(__DIR__ . '/../resources/sample.jin');
-		$this->parser      = new Dotink\Jin\Parser();
+		$this->parser      = new Dotink\Jin\Parser([
+			'foo' => 'bar'
+		], [
+			'hello' => function($name) {
+				return 'Hello ' . $name . '!';
+			}
+		]);
+
 		$this->objData     = $this->parser->parse($sample_file, FALSE);
 		$this->arrayData   = $this->parser->parse($sample_file);
 	}
@@ -68,6 +76,26 @@ final class ParsingTest extends TestCase
 			2,
 			$this->objData->get('complex.include')->value2
 		);
+	}
+
+
+	public function testRun()
+	{
+		$this->assertSame($this->arrayData->get('complex.run'), 'bar');
+	}
+
+
+	public function testEnv()
+	{
+		$this->assertSame($this->arrayData->get('complex.envWithDefault'), 'bar');
+		$this->assertSame($this->arrayData->get('complex.envWithoutDefault'), NULL);
+		$this->assertSame($this->arrayData->get('complex.envSetWithDefault'), 'foo');
+	}
+
+
+	public function testFunction()
+	{
+		$this->assertSame($this->arrayData->get('complex.customFunction'), 'Hello Matt!');
 	}
 
 	public function testMapping()

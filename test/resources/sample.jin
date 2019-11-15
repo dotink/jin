@@ -32,6 +32,26 @@ preserved until `foo=bar` or `[section]` or `\n\n`.
 	}
 
 	;
+	; Run with context
+	;
+
+	run = run($foo)
+
+	;
+	;
+	;
+
+	envWithDefault    = env(FOO, bar)
+	envWithoutDefault = env(BAR)
+	envSetWithDefault = env(FOOBAR, garbage)
+
+	;
+	;
+	;
+
+	customFunction = hello(Matt)
+
+	;
 	; Templates
 	;
 
