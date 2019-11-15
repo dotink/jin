@@ -272,7 +272,7 @@ class Parser
 				$value = str_replace('\\\\', '\\', $value);
 				$value = str_replace('\\', '\\\\', $value);
 
-			} elseif ($leadch == '0') {
+			} elseif ($leadch == '0' && isset($value[1])) {
 				if ($value[1] == 'x') {
 					$value = hdexdec($value);
 				} elseif ($value[1] == 'b') {
