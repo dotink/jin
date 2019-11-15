@@ -269,7 +269,7 @@ Then use them as you'd expect.
 hello = hello(Matt)
 ```
 
-Note, you can overload the `env()` function, however, reserved structures such as `map()`, `def()`, `inc` will not work.
+Note, you can overload the `env()` and even the `run()` function, however, overloading structures such as `map()`, `def()`, `inc()` will not work.
 
 ### Templates
 
