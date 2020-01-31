@@ -132,4 +132,33 @@ final class ParsingTest extends TestCase
 			$this->arrayData->get('reference.sub2.simpleValue')
 		);
 	}
+
+
+	public function testDashSection()
+	{
+		$this->assertSame(
+			$this->arrayData->get('dash-section.simpleValue'),
+			'value'
+		);
+
+		$this->assertSame(
+			'value',
+			$this->arrayData->get('dash-section.quotedValue')
+		);
+
+		$this->assertSame(
+			1,
+			$this->arrayData->get('dash-section.intValue')
+		);
+
+		$this->assertSame(
+			'This value is commented',
+			$this->arrayData->get('dash-section.comValue')
+		);
+
+		$this->assertSame(
+			"This is multiple lines of text.  Line endings should be\npreserved until `foo=bar` or `[section]` or `\\n\\n`.",
+			$this->arrayData->get('multiValue')
+		);
+	}
 }

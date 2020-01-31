@@ -271,6 +271,7 @@ class Parser
 			if (!is_numeric($value)) {
 				$value = str_replace('\\\\', '\\', $value);
 				$value = str_replace('\\', '\\\\', $value);
+				$value = str_replace("\n", " ", $value);
 
 			} elseif ($leadch == '0' && isset($value[1])) {
 				if ($value[1] == 'x') {
