@@ -99,6 +99,9 @@ class Parser
 		$jin_string = $this->removeWhitespace($jin_string);
 		$jin_string = $this->removeNewLines($jin_string);
 		$jin_string = trim($jin_string);
+		$jit_value  = ini_get('pcre.jit');
+
+		ini_set('pcre.jit', 0);
 
 		foreach (parse_ini_string($jin_string, TRUE, INI_SCANNER_RAW) as $index => $values) {
 			$this->index = $index;
@@ -116,6 +119,8 @@ class Parser
 				}
 			}
 		}
+
+		ini_set('pcre.jit', $jit_value);
 
 		return $this->data;
 	}
