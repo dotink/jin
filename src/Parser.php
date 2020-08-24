@@ -8,7 +8,7 @@ namespace Dotink\Jin;
 class Parser
 {
 	const COLLAPSE_CHARACTER        = "\xC2\xA0";
-	const REGEX_STRUCTURE           = '#^(?<type>[a-z]+)\s*\((?<args>(?:\n|.)*)\)\s*(?:\{(?<body>(?:\n|.)*)\})?$#';
+	const REGEX_STRUCTURE           = '#^(?<type>[a-z]+)\s*\((?<args>[^\)]*)\)\s*(?:\{(?<body>.*)\})?$#s';
 	const REGEX_CATEGORY_IDENTIFIER = '[\\\\\\/a-zA-Z0-9-_.&]+';
 	const REGEX_FIELD_IDENTIFIER    = '[a-zA-Z0-9-_]+';
 	const REGEX_NEW_LINE            = '\n';
@@ -99,9 +99,6 @@ class Parser
 		$jin_string = $this->removeWhitespace($jin_string);
 		$jin_string = $this->removeNewLines($jin_string);
 		$jin_string = trim($jin_string);
-		$jit_value  = ini_get('pcre.jit');
-
-		ini_set('pcre.jit', 0);
 
 		foreach (parse_ini_string($jin_string, TRUE, INI_SCANNER_RAW) as $index => $values) {
 			$this->index = $index;
@@ -119,8 +116,6 @@ class Parser
 				}
 			}
 		}
-
-		ini_set('pcre.jit', $jit_value);
 
 		return $this->data;
 	}
