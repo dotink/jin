@@ -8,7 +8,7 @@ namespace Dotink\Jin;
 class Parser
 {
 	const COLLAPSE_CHARACTER        = "\xC2\xA0";
-	const REGEX_STRUCTURE           = '#^(?<type>[a-z]+)\s*\((?<args>[^\)]*)\)\s*(?:\{(?<body>.*)\})?$#s';
+	const REGEX_STRUCTURE           = '#^(?<type>[a-z]+)\s*\((?<args>.*)\)\s*(?:\{(?<body>.*)\})?$#s';
 	const REGEX_CATEGORY_IDENTIFIER = '[\\\\\\/a-zA-Z0-9-_.&]+';
 	const REGEX_FIELD_IDENTIFIER    = '[a-zA-Z0-9-_]+';
 	const REGEX_NEW_LINE            = '\n';
