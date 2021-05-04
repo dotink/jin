@@ -93,7 +93,7 @@ class Parser
 	 */
 	public function parse($jin_string, $assoc = TRUE)
 	{
-		$this->data = clone $this->collection;
+		$jin_data    = clone $this->collection;
 		$jin_string = $this->removeComments($jin_string);
 		$jin_string = $this->removeReferences($jin_string);
 		$jin_string = $this->removeWhitespace($jin_string);
@@ -104,20 +104,30 @@ class Parser
 			$this->index = $index;
 
 			if (!is_array($values)) {
-				$this->data->set($this->index, $this->parseValue(NULL, $values, $assoc));
+				$jin_data->set($this->index, $this->parseValue(NULL, $values, $assoc));
 
 			} else {
-				$this->data->set($this->index, array());
+				$jin_data->set($this->index, array());
 
 				foreach ($values as $key => $value) {
 					$this->index = $index . '.' . $key;
 
-					$this->data->set($this->index, $this->parseValue(NULL, $value, $assoc));
+					$jin_data->set($this->index, $this->parseValue(NULL, $value, $assoc));
 				}
 			}
 		}
 
-		return $this->data;
+		if ($jin_data->has('--extends')) {
+			$path     = $jin_data->get('--extends');
+			$merged   = $this->parse(file_get_contents($path), $assoc);
+
+			$merged->mergeRecursiveDistinct($jin_data);
+			$merged->delete($jin_data->get('--without', []));
+
+			return $merged;
+		}
+
+		return $jin_data;
 	}
 
 
@@ -275,7 +285,7 @@ class Parser
 
 			} elseif ($leadch == '0' && isset($value[1])) {
 				if ($value[1] == 'x') {
-					$value = hdexdec($value);
+					$value = hexdec($value);
 				} elseif ($value[1] == 'b') {
 					$value = bindec($value);
 				} else {

@@ -1,3 +1,8 @@
+--extends = test/resources/base.jin
+--without = [
+	"complex.arrayValue"
+]
+
 simpleValue  = value
 quotedValue  = "value"
 intValue     = 1
@@ -5,7 +10,7 @@ floatValue   = 1.03
 boolValue    = true
 upBoolValue  = TRUE
 nullValue    = null
-upNullValue  = null
+upNullValue  = NULL
 envValue     = env(VALUE, FALSE)
 runValue     = run(md5('value'))
 comValue     = This value is commented ; So this should not be seen
@@ -136,9 +141,9 @@ preserved until `foo=bar` or `[section]` or `\n\n`.
 
 			"nestedObjectValue": {
 				"normal": 1,
-				"breaking": 
+				"breaking":
 					"Multi
-						Line 
+						Line
 					Text"
 			}
 		}
