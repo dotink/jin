@@ -7,12 +7,17 @@ namespace Dotink\Jin;
  */
 class Parser
 {
-	const COLLAPSE_CHARACTER        = "\xC2\xA0";
+	const COLLAPSE_CHARACTER        = "\xE2\x80\x8B";
+
 	const REGEX_STRUCTURE           = '#^(?<type>[a-z]+)\s*\((?<args>.*)\)\s*(?:\{(?<body>.*)\})?$#s';
+	const REGEX_QUOTED_STRING       = '#((?<![\\\\])["])((?:.(?!(?<![\\\\])\1))*.?)\1#sm';
+
 	const REGEX_CATEGORY_IDENTIFIER = '[\\\\\\/a-zA-Z0-9-_.&]+';
 	const REGEX_FIELD_IDENTIFIER    = '[a-zA-Z0-9-_]+';
 	const REGEX_NEW_LINE            = '\n';
 	const REGEX_WHITESPACE          = '\t|\s';
+
+	const TOKEN_HOLDER              = '___JINT@(%s)___';
 
 
 	/**
@@ -94,10 +99,23 @@ class Parser
 	public function parse($jin_string, $assoc = TRUE)
 	{
 		$jin_data    = clone $this->collection;
+
+		preg_match_all(self::REGEX_QUOTED_STRING, $jin_string, $matches);
+
+		foreach ($matches[0] as $i => $string) {
+			$jin_string = str_replace($string, sprintf(self::TOKEN_HOLDER, $i), $jin_string);
+		}
+
 		$jin_string = $this->removeComments($jin_string);
+
+		foreach (array_map('stripslashes', $matches[0]) as $i => $string) {
+			$jin_string = str_replace(sprintf(self::TOKEN_HOLDER, $i), $string, $jin_string);
+		}
+
 		$jin_string = $this->removeReferences($jin_string);
 		$jin_string = $this->removeWhitespace($jin_string);
 		$jin_string = $this->removeNewLines($jin_string);
+
 		$jin_string = trim($jin_string);
 
 		foreach (parse_ini_string($jin_string, TRUE, INI_SCANNER_RAW) as $index => $values) {
@@ -256,8 +274,9 @@ class Parser
 	 */
 	protected function parseValue($args, $body, $assoc)
 	{
-		$value  = trim(str_replace(static::COLLAPSE_CHARACTER, "\n", $body));
-		$leadch = ($length = strlen($value)) ? strtolower($value[0]) : '';
+		$value = trim(str_replace(static::COLLAPSE_CHARACTER, "\n", $body));
+		$fch   = ($l = strlen($value)) ? strtolower($value[0]) : '';
+		$lch   = ($l = strlen($value)) ? strtolower($value[$l - 1]) : '';
 
 		if (preg_match(static::REGEX_STRUCTURE, $value, $matches)) {
 			$method = 'parse' . $matches['type'];
@@ -268,34 +287,39 @@ class Parser
 				$value = $this->parseCall($matches['type'], $matches['args'] ?? NULL, $assoc);
 			}
 
-		} elseif (in_array($leadch, ['n', 't', 'f']) && in_array($length, [4, 5])) {
-			if (strtolower($value) == 'null') {
-				$value = NULL;
-			} elseif (strtolower($value) == 'true') {
-				$value = TRUE;
-			} elseif (strtolower($value) == 'false') {
-				$value = FALSE;
+		} elseif (strtolower($value) == 'null') {
+			$value = NULL;
+
+		} elseif (strtolower($value) == 'true') {
+			$value = TRUE;
+
+		} elseif (strtolower($value) == 'false') {
+			$value = FALSE;
+
+		} elseif (substr($value, 0, 2) == '0b' && preg_match('#[0-1]*#', $value)) {
+			$value = bindec($value);
+
+		} elseif (substr($value, 0, 2) == '0x' && ctype_xdigit(substr($value, 2))) {
+			$value = hexdec($value);
+
+		} elseif ($fch == '0' && preg_match('#[0-7]*#', $value)) {
+			$value = octdec($value);
+
+		} elseif (is_numeric($value)) {
+			if (strpos($value, '.') !== FALSE) {
+				$value = floatval($value);
+			} else {
+				$value = intval($value);
 			}
 
-		} elseif (in_array($leadch, ['{', '[', '"']) || is_numeric($value)) {
-			if (!is_numeric($value)) {
-				$value = str_replace('\\\\', '\\', $value);
-				$value = str_replace('\\', '\\\\', $value);
-				$value = str_replace("\n", " ", $value);
-
-			} elseif ($leadch == '0' && isset($value[1])) {
-				if ($value[1] == 'x') {
-					$value = hexdec($value);
-				} elseif ($value[1] == 'b') {
-					$value = bindec($value);
-				} else {
-					$value = octdec($value);
-				}
-			}
-
+		} elseif (in_array([$fch, $lch], [['{', '}'], ['[', ']']])) {
+			$value = str_replace('\\\\', '\\', $value);
+			$value = str_replace('\\', '\\\\', $value);
+			$value = str_replace("\n", " ", $value);
+			$value = preg_replace('#,\s*(\\]|\\})#', '$1', $value);
 			$value = json_decode($value, $assoc);
 
-			if ($value === NULL) {
+			if (is_null($value)) {
 				throw new \RuntimeException(sprintf(
 					'Error parsing JSON data: %s',
 					$body

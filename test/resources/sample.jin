@@ -3,19 +3,26 @@
 	"complex.arrayValue"
 ]
 
-simpleValue  = value
-quotedValue  = "value"
-intValue     = 1
-floatValue   = 1.03
-boolValue    = true
-upBoolValue  = TRUE
-nullValue    = null
-upNullValue  = NULL
-envValue     = env(VALUE, FALSE)
-runValue     = run(md5('value'))
-comValue     = This value is commented ; So this should not be seen
-multiValue   = This is multiple lines of text.  Line endings should be
+simpleValue    = value
+quotedValue    = "value"
+intValue       = 1
+floatValue     = 1.03
+hexValue       = 0xD
+binValue       = 0b1101
+octValue       = 015
+boolValue      = true
+upBoolValue    = TRUE
+nullValue      = null
+upNullValue    = NULL
+envValue       = env(VALUE, FALSE)
+runValue       = run(md5('value'))
+comValue       = This value is commented ; So this should not be seen
+comQuotedValue = "This value is quoted ; So this \" \\ should be seen"
+multiValue     = This is multiple lines of text.  Line endings should be
 preserved until `foo=bar` or `[section]` or `\n\n`.
+qmultiValue    = "
+	Hopefully this works as well ; and you can see this
+"
 
 [complex]
 
@@ -23,8 +30,8 @@ preserved until `foo=bar` or `[section]` or `\n\n`.
 	; More complex JSON-like values
 	;
 
-	arrayValue   = ["value1", "value2"]
-	objectValue  = {"value": "value"}
+	arrayValue   = ["value1", "value2",]
+	objectValue  = {"value": "value",}
 	complexValue = {
 		;
 		; Comment
@@ -32,7 +39,7 @@ preserved until `foo=bar` or `[section]` or `\n\n`.
 
 		"arrayValue": [
 			"value1", ; Inline Comment
-			"value2"
+			"value2",
 		]
 	}
 
@@ -60,14 +67,16 @@ preserved until `foo=bar` or `[section]` or `\n\n`.
 	; Templates
 	;
 
-	template = def(value1, value2) {
+	template = def(value1, value2)
+	{
 		{
 			"value1": $value1,
 			"value2": $value2
 		}
 	}
 
-	include = inc(complex.template) {
+	include = inc(complex.template)
+	{
 		1
 
 		;

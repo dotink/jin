@@ -46,13 +46,58 @@ final class ParsingTest extends TestCase
 		);
 	}
 
-	public function testComValue()
+
+	public function testFloatValue()
+	{
+		$this->assertSame(
+			1.03,
+			$this->arrayData->get('floatValue')
+		);
+	}
+
+
+	public function testHexValue()
+	{
+		$this->assertSame(
+			13,
+			$this->arrayData->get('hexValue')
+		);
+	}
+
+	public function testBinValue()
+	{
+		$this->assertSame(
+			13,
+			$this->arrayData->get('binValue')
+		);
+	}
+
+	public function testOctValue()
+	{
+		$this->assertSame(
+			13,
+			$this->arrayData->get('octValue')
+		);
+	}
+
+
+	public function testComplexValue()
 	{
 		$this->assertSame(
 			'This value is commented',
 			$this->arrayData->get('comValue')
 		);
 	}
+
+
+	public function testComplexQuotedValue()
+	{
+		$this->assertSame(
+			'This value is quoted ; So this " \ should be seen',
+			$this->arrayData->get('comQuotedValue')
+		);
+	}
+
 
 	public function testMultiValue()
 	{
