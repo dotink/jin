@@ -7,10 +7,11 @@ namespace Dotink\Jin;
  */
 class Parser
 {
-	const COLLAPSE_CHARACTER        = "\xE2\x80\x8B";
+	const COLLAPSE_CHARACTER        = "\xC2\xA0";
 
 	const REGEX_STRUCTURE           = '#^(?<type>[a-z]+)\s*\((?<args>.*)\)\s*(?:\{(?<body>.*)\})?$#s';
-	const REGEX_QUOTED_STRING       = '#((?<![\\\\])["])((?:.(?!(?<![\\\\])\1))*.?)\1#sm';
+	const REGEX_QUOTED_STRING       = '#((?<![\1])["])((?:.(?!(?<![\1])\1))*.?)\1#s';
+	const REGEX_TRAILING_COMMA      = '#,\s*(\\]|\\})#';
 
 	const REGEX_CATEGORY_IDENTIFIER = '[\\\\\\/a-zA-Z0-9-_.&]+';
 	const REGEX_FIELD_IDENTIFIER    = '[a-zA-Z0-9-_]+';
@@ -57,6 +58,12 @@ class Parser
 
 
 	/**
+	 *
+	 */
+	protected $tokens = array();
+
+
+	/**
 	 * Create a new Jin
 	 *
 	 * @access public
@@ -99,6 +106,7 @@ class Parser
 	public function parse($jin_string, $assoc = TRUE)
 	{
 		$jin_data    = clone $this->collection;
+		$jin_string  = $this->removeComments($jin_string, FALSE);
 
 		preg_match_all(self::REGEX_QUOTED_STRING, $jin_string, $matches);
 
@@ -106,16 +114,15 @@ class Parser
 			$jin_string = str_replace($string, sprintf(self::TOKEN_HOLDER, $i), $jin_string);
 		}
 
-		$jin_string = $this->removeComments($jin_string);
+		$jin_string = $this->removeInlineComments($jin_string);
 
-		foreach (array_map('stripslashes', $matches[0]) as $i => $string) {
+		foreach ($matches[0] as $i => $string) {
 			$jin_string = str_replace(sprintf(self::TOKEN_HOLDER, $i), $string, $jin_string);
 		}
 
 		$jin_string = $this->removeReferences($jin_string);
 		$jin_string = $this->removeWhitespace($jin_string);
 		$jin_string = $this->removeNewLines($jin_string);
-
 		$jin_string = trim($jin_string);
 
 		foreach (parse_ini_string($jin_string, TRUE, INI_SCANNER_RAW) as $index => $values) {
@@ -313,11 +320,14 @@ class Parser
 			}
 
 		} elseif (in_array([$fch, $lch], [['{', '}'], ['[', ']']])) {
-			$value = str_replace('\\\\', '\\', $value);
-			$value = str_replace('\\', '\\\\', $value);
-			$value = str_replace("\n", " ", $value);
-			$value = preg_replace('#,\s*(\\]|\\})#', '$1', $value);
-			$value = json_decode($value, $assoc);
+			$value = str_replace(
+				["\n", "\t", "\\\\", "\\", "\\\\\""],
+				[" ",  " ",  "\\", "\\\\", "\\\""],
+				$value
+			);
+
+			$value = preg_replace(self::REGEX_TRAILING_COMMA, '$1', $value);
+			$value = json_decode($body = $value, $assoc);
 
 			if (is_null($value)) {
 				throw new \RuntimeException(sprintf(
@@ -325,6 +335,9 @@ class Parser
 					$body
 				));
 			}
+
+		} else {
+			$value = str_replace("\"\"", "\"", $value);
 		}
 
 		return $value;
@@ -332,13 +345,29 @@ class Parser
 
 
 	/**
-	 * Removes all comments
+	 * Removes line comments
 	 *
 	 * @access protected
 	 * @param string $string The string from which to remove comments
 	 * @return string The string, stripped of comments
 	 */
 	protected function removeComments($string)
+	{
+		return preg_replace(sprintf(
+			'#((?:^|%s)\s*);.*#',
+			self::REGEX_NEW_LINE
+		), '', $string);
+	}
+
+
+	/**
+	 * Removes inline comments
+	 *
+	 * @access protected
+	 * @param string $string The string from which to remove comments
+	 * @return string The string, stripped of comments
+	 */
+	protected function removeInlineComments($string)
 	{
 		return preg_replace(sprintf(
 			'#((?:^|%s)[^;]*);.*#',
@@ -410,6 +439,7 @@ class Parser
 			self::REGEX_FIELD_IDENTIFIER
 		), static::COLLAPSE_CHARACTER . '$2', $string); // replace with non-breaking space
 	}
+
 
 	/**
 	 * Removes leading whitespace from the proper places

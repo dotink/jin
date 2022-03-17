@@ -17,7 +17,7 @@ upNullValue    = NULL
 envValue       = env(VALUE, FALSE)
 runValue       = run(md5('value'))
 comValue       = This value is commented ; So this should not be seen
-comQuotedValue = "This value is quoted ; So this \" \\ should be seen"
+comQuotedValue = "This value is quoted ; with a "" so should be seen"
 multiValue     = This is multiple lines of text.  Line endings should be
 preserved until `foo=bar` or `[section]` or `\n\n`.
 qmultiValue    = "
@@ -31,7 +31,7 @@ qmultiValue    = "
 	;
 
 	arrayValue   = ["value1", "value2",]
-	objectValue  = {"value": "value",}
+	objectValue  = {"value": "valuewithsmi;",}
 	complexValue = {
 		;
 		; Comment
@@ -40,7 +40,7 @@ qmultiValue    = "
 		"arrayValue": [
 			"value1", ; Inline Comment
 			"value2",
-		]
+		],
 	}
 
 	;

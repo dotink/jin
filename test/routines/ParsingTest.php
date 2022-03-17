@@ -93,7 +93,7 @@ final class ParsingTest extends TestCase
 	public function testComplexQuotedValue()
 	{
 		$this->assertSame(
-			'This value is quoted ; So this " \ should be seen',
+			'This value is quoted ; with a " so should be seen',
 			$this->arrayData->get('comQuotedValue')
 		);
 	}
