@@ -8,9 +8,10 @@ namespace Dotink\Jin;
 class Parser
 {
 	const COLLAPSE_CHARACTER        = "\xC2\xA0";
+	const SEMICOLON_CHARACTER       = "\xC2\xAD";
 
 	const REGEX_STRUCTURE           = '#^(?<type>[a-z]+)\s*\((?<args>.*)\)\s*(?:\{(?<body>.*)\})?$#s';
-	const REGEX_QUOTED_STRING       = '#((?<![\1])["])((?:.(?!(?<![\1])\1))*.?)\1#s';
+	const REGEX_QUOTED_STRING       = '#"((?:""|[^"])*)"#s';
 	const REGEX_TRAILING_COMMA      = '#,\s*(\\]|\\})#';
 
 	const REGEX_CATEGORY_IDENTIFIER = '[\\\\\\/a-zA-Z0-9-_.&]+';
@@ -18,7 +19,9 @@ class Parser
 	const REGEX_NEW_LINE            = '\n';
 	const REGEX_WHITESPACE          = '\t|\s';
 
-	const TOKEN_HOLDER              = '___JINT@(%s)___';
+	const TOKEN_QUOTED              = '___QUOTED@(%s)';
+	const TOKEN_PROMISE             = '___PROMISE//%s';
+	const TOKEN_TEMPLATE            = '___TEMPLATE %s';
 
 
 	/**
@@ -54,13 +57,13 @@ class Parser
 	/**
 	 *
 	 */
-	protected $templates = array();
+	protected $promises = array();
 
 
 	/**
 	 *
 	 */
-	protected $tokens = array();
+	protected $templates = array();
 
 
 	/**
@@ -72,10 +75,9 @@ class Parser
 	public function __construct(array $context = [], array $functions = [])
 	{
 		$this->collection  = new Collection();
-		$this->templates   = new Collection();
 		$builtin_functions = [
-			'env' => [$this, 'env'],
-			'run' => [$this, 'exec']
+			'env' => [$this, 'extract'],
+			'run' => [$this, 'execute']
 		];
 
 		foreach ($context as $name => $value) {
@@ -105,30 +107,44 @@ class Parser
 	 */
 	public function parse($jin_string, $assoc = TRUE)
 	{
-		$jin_data    = clone $this->collection;
-		$jin_string  = $this->removeComments($jin_string, FALSE);
+		//
+		// The order of this parsing is important, don't change without significant contemplation
+		//
 
-		preg_match_all(self::REGEX_QUOTED_STRING, $jin_string, $matches);
-
-		foreach ($matches[0] as $i => $string) {
-			$jin_string = str_replace($string, sprintf(self::TOKEN_HOLDER, $i), $jin_string);
-		}
-
+		$jin_data   = clone $this->collection;
+		$jin_string = trim($jin_string);
+		$jin_string = $this->removeComments($jin_string, FALSE);
+		$jin_string = $this->tokenizeQuotes($jin_string, $parts);
 		$jin_string = $this->removeInlineComments($jin_string);
-
-		foreach ($matches[0] as $i => $string) {
-			$jin_string = str_replace(sprintf(self::TOKEN_HOLDER, $i), $string, $jin_string);
-		}
-
 		$jin_string = $this->removeReferences($jin_string);
 		$jin_string = $this->removeWhitespace($jin_string);
-		$jin_string = $this->removeNewLines($jin_string);
-		$jin_string = trim($jin_string);
+		$jin_string = $this->untokenizeQuotes($jin_string, $parts);
+		$jin_string = $this->prepareNewLines($jin_string);
+		$jin_string = $this->prepareSemiColons($jin_string);
+
+		$jin_data->on('set', function ($key, $value) use ($jin_data) {
+			if (!is_string($value) || !sscanf($value, self::TOKEN_TEMPLATE, $body)) {
+				return;
+			}
+
+			foreach (array_keys($this->promises) as $index) {
+				if (!sscanf($jin_data->get($index), self::TOKEN_PROMISE, $template)) {
+					continue;
+				}
+
+				if ($template !== $key) {
+					continue;
+				}
+
+				$jin_data->set($this->index = $index, $this->promises[$index]());
+				unset($this->promises[$index]);
+			}
+		});
 
 		foreach (parse_ini_string($jin_string, TRUE, INI_SCANNER_RAW) as $index => $values) {
 			$this->index = $index;
 
-			if (!is_array($values)) {
+			if (is_scalar($values)) {
 				$jin_data->set($this->index, $this->parseValue(NULL, $values, $assoc));
 
 			} else {
@@ -158,24 +174,23 @@ class Parser
 
 	/**
 	 *
-	 *
 	 */
-	public function env($name, $default = NULL)
+	protected function execute($php)
 	{
-		return getenv($name) !== FALSE
-			? getenv($name)
-			: $default;
+		extract($this->context);
+
+		return eval("return $php;");
 	}
 
 
 	/**
 	 *
 	 */
-	protected function exec($php)
+	protected function extract($name, $default = NULL)
 	{
-		extract($this->context);
-
-		return eval("return $php;");
+		return getenv($name) !== FALSE
+			? getenv($name)
+			: $default;
 	}
 
 
@@ -193,9 +208,11 @@ class Parser
 			));
 		}
 
+		$args = $this->tokenizeQuotes($args, $parts);
+
 		return $this->functions[$type](...array_map(
-			function($arg) use ($assoc) {
-				return $this->parseValue(NULL, trim($arg), $assoc);
+			function($arg) use ($assoc, $parts) {
+				return $this->parseValue(NULL, $this->untokenizeQuotes($arg, $parts), $assoc);
 			},
 			explode(',', $args)
 		));
@@ -207,12 +224,12 @@ class Parser
 	 */
 	protected function parseDef($args, $body, $assoc)
 	{
-		$this->templates->set($this->index, [
+		$this->templates[$this->index] = [
 			'args' => array_map('trim', explode(',', $args)),
-			'body' => trim($body)
-		]);
+			'body' => $body
+		];
 
-		return 'def(' . $this->index . ')';
+		return sprintf(self::TOKEN_TEMPLATE, $body);
 	}
 
 
@@ -221,8 +238,16 @@ class Parser
 	 */
 	protected function parseInc($args, $body, $assoc)
 	{
-		$map    = $this->templates->get(trim($args));
-		$values = explode("\n", trim($body));
+		if (!isset($this->templates[$args])) {
+			$this->promises[$this->index] = function () use ($args, $body, $assoc) {
+				return $this->parseInc($args, $body, $assoc);
+			};
+
+			return sprintf(self::TOKEN_PROMISE, $args);
+		}
+
+		$map    = $this->templates[$args];
+		$values = explode("\n", $body);
 		$json   = $map['body'];
 
 		foreach ($values as $i => $value) {
@@ -233,13 +258,22 @@ class Parser
 		return $this->parseValue(NULL, $json, $assoc);
 	}
 
+
 	/**
 	 *
 	 */
 	protected function parseMap($args, $body, $assoc)
 	{
-		$map    = $this->templates->get(trim($args));
-		$values = explode("\n", trim($body));
+		if (!isset($this->templates[$args])) {
+			$this->promises[$this->index] = function() use ($args, $body, $assoc) {
+				return $this->parseMap($args, $body, $assoc);
+			};
+
+			return sprintf(self::TOKEN_PROMISE, $args);
+		}
+
+		$map    = $this->templates[$args];
+		$values = explode("\n", $body);
 
 		foreach ($values as $i => $row) {
 			$row  = trim(rtrim($row, ','), "\t");
@@ -276,12 +310,14 @@ class Parser
 	}
 
 
-	/**
+	/**trim(
 	 *
 	 */
-	protected function parseValue($args, $body, $assoc)
+	protected function parseValue($args, $value, $assoc)
 	{
-		$value = trim(str_replace(static::COLLAPSE_CHARACTER, "\n", $body));
+		$value = trim($value);
+		$value = str_replace(static::COLLAPSE_CHARACTER, "\n", $value);
+		$value = str_replace(static::SEMICOLON_CHARACTER, ";", $value);
 		$fch   = ($l = strlen($value)) ? strtolower($value[0]) : '';
 		$lch   = ($l = strlen($value)) ? strtolower($value[$l - 1]) : '';
 
@@ -289,9 +325,19 @@ class Parser
 			$method = 'parse' . $matches['type'];
 
 			if (strtolower($method) !== 'parsecall' && is_callable([$this, $method])) {
-				$value = $this->$method($matches['args'] ?? NULL, $matches['body'] ?? NULL, $assoc);
+				$value = $this->$method(
+					trim($matches['args'] ?? NULL),
+					trim($matches['body'] ?? NULL),
+					$assoc
+				);
+
 			} else {
-				$value = $this->parseCall($matches['type'], $matches['args'] ?? NULL, $assoc);
+				$value = $this->parseCall(
+					trim($matches['type'] ?? NULL),
+					trim($matches['args'] ?? NULL),
+					$assoc
+				);
+
 			}
 
 		} elseif (strtolower($value) == 'null') {
@@ -321,18 +367,21 @@ class Parser
 
 		} elseif (in_array([$fch, $lch], [['{', '}'], ['[', ']']])) {
 			$value = str_replace(
-				["\n", "\t", "\\\\", "\\", "\\\\\""],
-				[" ",  " ",  "\\", "\\\\", "\\\""],
+				["\n", "\t", "\\\\", "\\",],
+				[" ",  " ",  "\\",   "\\\\"],
 				$value
 			);
 
+			$value = $this->tokenizeQuotes($value, $parts);
 			$value = preg_replace(self::REGEX_TRAILING_COMMA, '$1', $value);
-			$value = json_decode($body = $value, $assoc);
+			$value = $this->untokenizeQuotes($value, array_map(function($part) {
+				return $part == '""' ? $part : str_replace('""', "\\\"", $part);
+			}, $parts));
 
-			if (is_null($value)) {
+			if (is_null($value = json_decode($original = $value, $assoc))) {
 				throw new \RuntimeException(sprintf(
 					'Error parsing JSON data: %s',
-					$body
+					$original
 				));
 			}
 
@@ -341,6 +390,37 @@ class Parser
 		}
 
 		return $value;
+	}
+
+
+	/**
+	 * Prepares newlines for parsing by replacing them with a safe character
+	 *
+	 * @access protected
+	 * @param string $string The string from which to prepare
+	 * @return string The string, prepared
+	 */
+	protected function prepareNewLines($string)
+	{
+		return preg_replace(sprintf(
+			'#(^|%s)(?!(\[%s\]|%s\s*=|;))#',
+			self::REGEX_NEW_LINE,
+			self::REGEX_CATEGORY_IDENTIFIER,
+			self::REGEX_FIELD_IDENTIFIER
+		), static::COLLAPSE_CHARACTER . '$2', $string); // replace with non-breaking space
+	}
+
+
+	/**
+	 * Prepares semi-colons for parsing by replacing them with a safe character
+	 *
+	 * @access protected
+	 * @param string $string The string from which to prepare
+	 * @return string The string, prepared
+	 */
+	protected function prepareSemiColons($string)
+	{
+		return str_replace(';', self::SEMICOLON_CHARACTER, $string);
 	}
 
 
@@ -424,24 +504,6 @@ class Parser
 
 
 	/**
-	 * Removes newlines in the proper places
-	 *
-	 * @access protected
-	 * @param string $string The string from which to remove new lines
-	 * @return string The string, stripped of new lines
-	 */
-	protected function removeNewLines($string)
-	{
-		return preg_replace(sprintf(
-			'#(^|%s)(?!(\[%s\]|%s\s*=|;))#',
-			self::REGEX_NEW_LINE,
-			self::REGEX_CATEGORY_IDENTIFIER,
-			self::REGEX_FIELD_IDENTIFIER
-		), static::COLLAPSE_CHARACTER . '$2', $string); // replace with non-breaking space
-	}
-
-
-	/**
 	 * Removes leading whitespace from the proper places
 	 *
 	 * @access protected
@@ -455,5 +517,37 @@ class Parser
 			self::REGEX_NEW_LINE,
 			self::REGEX_WHITESPACE
 		), '$1', $string);
+	}
+
+
+	/**
+	 *
+	 */
+	protected function tokenizeQuotes($string, &$parts)
+	{
+		$parts = array();
+
+		if (preg_match_all(self::REGEX_QUOTED_STRING, $string, $matches)) {
+			$parts = $matches[0];
+
+			foreach ($parts as $i => $sub_string) {
+				$string = str_replace($sub_string, sprintf(self::TOKEN_QUOTED, $i), $string);
+			}
+		}
+
+		return $string;
+	}
+
+
+	/**
+	 *
+	 */
+	protected function untokenizeQuotes($string, $parts)
+	{
+		foreach ($parts as $i => $sub_string) {
+			$string = str_replace(sprintf(self::TOKEN_QUOTED, $i), $sub_string, $string);
+		}
+
+		return $string;
 	}
 }

@@ -30,8 +30,8 @@ qmultiValue    = "
 	; More complex JSON-like values
 	;
 
-	arrayValue   = ["value1", "value2",]
-	objectValue  = {"value": "valuewithsmi;",}
+	arrayValue   = ["value1", "value2"]  ; test like "
+	objectValue  = {"value": "valuewithsmi;"} ; this "
 	complexValue = {
 		;
 		; Comment
@@ -67,14 +67,6 @@ qmultiValue    = "
 	; Templates
 	;
 
-	template = def(value1, value2)
-	{
-		{
-			"value1": $value1,
-			"value2": $value2
-		}
-	}
-
 	include = inc(complex.template)
 	{
 		1
@@ -86,7 +78,8 @@ qmultiValue    = "
 		2 ; Inline Comment
 	}
 
-	mapping = map(complex.template) {
+	mapping = map(complex.template)
+	{
 		1	2
 
 		;
@@ -94,6 +87,14 @@ qmultiValue    = "
 		;
 
 		3	env(VALUE) ; Inline Comment
+	}
+
+	template = def(value1, value2)
+	{
+		{
+			"value1": $value1,
+			"value2": $value2
+		}
 	}
 
 [reference]
@@ -116,6 +117,7 @@ qmultiValue    = "
 
 [dash-section] ; does this work?
 
+	emptyValue   = ""
 	simpleValue  = value
 	quotedValue  = "value"
 	intValue     = 1
@@ -137,7 +139,7 @@ qmultiValue    = "
 		;
 
 		arrayValue   = ["value1", "value2"]
-		objectValue  = {"value": "value"}
+		objectValue  = {"value": "va""lue,}"}
 		complexValue = {
 			;
 			; Comment

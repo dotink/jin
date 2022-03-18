@@ -9,8 +9,8 @@ final class ParsingTest extends TestCase
 		putenv('FOOBAR=foo');
 		putenv('VALUE=value');
 
-		$sample_file       = file_get_contents(__DIR__ . '/../resources/sample.jin');
-		$this->parser      = new Dotink\Jin\Parser([
+		$sample_file  = file_get_contents(__DIR__ . '/../resources/sample.jin');
+		$this->parser = new Dotink\Jin\Parser([
 			'foo' => 'bar'
 		], [
 			'hello' => function($name) {
@@ -18,8 +18,8 @@ final class ParsingTest extends TestCase
 			}
 		]);
 
-		$this->objData     = $this->parser->parse($sample_file, FALSE);
-		$this->arrayData   = $this->parser->parse($sample_file);
+		$this->arrayData = $this->parser->parse($sample_file);
+		$this->objData   = $this->parser->parse($sample_file, FALSE);
 	}
 
 	public function testSimpleValue()
