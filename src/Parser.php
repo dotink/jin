@@ -158,6 +158,8 @@ class Parser
 			}
 		}
 
+		$jin_data->on('set', NULL);
+
 		if ($jin_data->has('--extends')) {
 			$path     = $jin_data->get('--extends');
 			$merged   = $this->parse(file_get_contents($path), $assoc);

@@ -33,11 +33,10 @@ class Collection extends Dot
 	}
 
 
-
 	/**
 	 *
 	 */
-	public function on($method, callable $callback)
+	public function on($method, ?callable $callback)
 	{
 		$method = strtolower($method);
 
@@ -45,7 +44,11 @@ class Collection extends Dot
 			$this->callbacks[$method] = array();
 		}
 
-		$this->callbacks[$method][] = $callback;
+		if ($callback) {
+			$this->callbacks[$method][] = $callback;
+		} else {
+			$this->callbacks[$method] = array();
+		}
 
 		return $this;
 	}
