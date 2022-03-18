@@ -2,6 +2,8 @@
 
 namespace Dotink\Jin;
 
+use SplObjectStorage;
+
 /**
  *
  */
@@ -20,8 +22,29 @@ class Parser
 	const REGEX_WHITESPACE          = '\t|\s';
 
 	const TOKEN_QUOTED              = '___QUOTED@(%s)';
-	const TOKEN_PROMISE             = '___PROMISE//%s';
+	const TOKEN_PROMISE_RENDER      = '___RENDER//%s';
 	const TOKEN_TEMPLATE            = '___TEMPLATE %s';
+
+
+	/**
+	 *
+	 */
+	static protected $builtinFunctions = [
+		'env' => 'callEnv',
+		'run' => 'callRun'
+	];
+
+
+	/**
+	 *
+	 */
+	protected $activeKey = NULL;
+
+
+	/**
+	 *
+	 */
+	protected $activePath = NULL;
 
 
 	/**
@@ -33,25 +56,19 @@ class Parser
 	/**
 	 *
 	 */
-	protected $context = array();
+	protected $data = array();
+
+
+	/**
+	 *
+	 */
+	protected $contexts = array();
 
 
 	/**
 	 *
 	 */
 	protected $functions = array();
-
-
-	/**
-	 *
-	 */
-	protected $index = NULL;
-
-
-	/**
-	 *
-	 */
-	protected $data = NULL;
 
 
 	/**
@@ -74,26 +91,37 @@ class Parser
 	 */
 	public function __construct(array $context = [], array $functions = [])
 	{
-		$this->collection  = new Collection();
-		$builtin_functions = [
-			'env' => [$this, 'extract'],
-			'run' => [$this, 'execute']
-		];
+		$this->collection = new Collection();
 
 		foreach ($context as $name => $value) {
-			$this->context[strtolower($name)] = $value;
+			$this->contexts[strtolower($name)] = $value;
 		}
 
-		foreach ($functions + $builtin_functions as $name => $value) {
+		foreach (static::$builtinFunctions as $name => $value) {
+			$this->functions[strtolower($name)] = [$this, $value];
+		}
+
+		foreach ($functions as $name => $value) {
+			$this->functions[strtolower($name)] = $value;
+		}
+
+		foreach ($this->functions as $name => $value) {
 			if (!is_callable($value)) {
 				throw new \RuntimeException(
 					'Cannot register function "%s", must map to callable',
 					$name
 				);
 			}
-
-			$this->functions[strtolower($name)] = $value;
 		}
+	}
+
+
+	/**
+	 *
+	 */
+	public function all()
+	{
+		return $this->data;
 	}
 
 
@@ -101,85 +129,89 @@ class Parser
 	 * Parse a Jin string
 	 *
 	 * @acces public
-	 * @param string $jin_string The Jin string to parse
+	 * @param string $string The Jin string to parse
 	 * @param boolean $assoc Whether JSON objects should be associative arrays
+	 * @param string $key A string with which to identify the collection
 	 * @return Collection The parsed Jin string as a Collection
 	 */
-	public function parse($jin_string, $assoc = TRUE)
+	public function parse($string, $assoc = TRUE, $key = NULL)
 	{
 		//
-		// The order of this parsing is important, don't change without significant contemplation
+		// Boot
 		//
 
-		$jin_data   = clone $this->collection;
-		$jin_string = str_replace("\r\n", "\n", trim($jin_string));
-		$jin_string = $this->removeComments($jin_string, FALSE);
-		$jin_string = $this->tokenizeQuotes($jin_string, $parts);
-		$jin_string = $this->removeInlineComments($jin_string);
-		$jin_string = $this->removeReferences($jin_string);
-		$jin_string = $this->removeWhitespace($jin_string);
-		$jin_string = $this->untokenizeQuotes($jin_string, $parts);
-		$jin_string = $this->prepareNewLines($jin_string);
-		$jin_string = $this->prepareSemiColons($jin_string);
+		$collection = $this->init($string, $key);
 
-		$jin_data->on('set', function ($key, $value) use ($jin_data) {
-			if (!is_string($value) || !sscanf($value, self::TOKEN_TEMPLATE, $body)) {
-				return;
-			}
+		//
+		// Set any special handlers
+		//
 
-			foreach (array_keys($this->promises) as $index) {
-				if (!sscanf($jin_data->get($index), self::TOKEN_PROMISE, $template)) {
-					continue;
-				}
-
-				if ($template !== $key) {
-					continue;
-				}
-
-				$jin_data->set($this->index = $index, $this->promises[$index]());
-				unset($this->promises[$index]);
-			}
+		$collection->on('set', function($key, $value) {
+			$this->onSetTemplate($key, $value);
 		});
 
-		foreach (parse_ini_string($jin_string, TRUE, INI_SCANNER_RAW) as $index => $values) {
-			$this->index = $index;
+		//
+		// Main parsing loop
+		//
+
+		foreach (parse_ini_string($string, TRUE, INI_SCANNER_RAW) as $path => $values) {
+			$this->activePath = $path;
 
 			if (is_scalar($values)) {
-				$jin_data->set($this->index, $this->parseValue(NULL, $values, $assoc));
+				$this->dataSet($this->activePath, $this->parseValue(NULL, $values, $assoc));
 
 			} else {
-				$jin_data->set($this->index, array());
+				$this->dataSet($this->activePath, array());
 
-				foreach ($values as $key => $value) {
-					$this->index = $index . '.' . $key;
+				foreach ($values as $sub_path => $value) {
+					$this->activePath  = $path. '.' . $sub_path;
 
-					$jin_data->set($this->index, $this->parseValue(NULL, $value, $assoc));
+					$this->dataSet($this->activePath, $this->parseValue(NULL, $value, $assoc));
 				}
 			}
 		}
 
-		$jin_data->on('set', NULL);
+		//
+		// Clear Handlers
+		//
 
-		if ($jin_data->has('--extends')) {
-			$path     = $jin_data->get('--extends');
-			$merged   = $this->parse(file_get_contents($path), $assoc);
+		$collection->on('set', NULL);
 
-			$merged->mergeRecursiveDistinct($jin_data);
-			$merged->delete($jin_data->get('--without', []));
+		//
+		// Extend
+		//
+
+		if ($collection->has('--extends')) {
+			$file   = $collection->get('--extends');
+			$merged = $this->parse(file_get_contents($file), $assoc);
+
+			$merged->mergeRecursiveDistinct($collection);
+			$merged->delete($collection->get('--without', []));
 
 			return $merged;
 		}
 
-		return $jin_data;
+		return $collection;
 	}
 
 
 	/**
 	 *
 	 */
-	protected function execute($php)
+	protected function callEnv($name, $default = NULL)
 	{
-		extract($this->context);
+		return getenv($name) !== FALSE
+			? getenv($name)
+			: $default;
+	}
+
+
+	/**
+	 *
+	 */
+	protected function callRun($php)
+	{
+		extract($this->contexts);
 
 		return eval("return $php;");
 	}
@@ -188,11 +220,88 @@ class Parser
 	/**
 	 *
 	 */
-	protected function extract($name, $default = NULL)
+	public function dataGet($index)
 	{
-		return getenv($name) !== FALSE
-			? getenv($name)
-			: $default;
+		list($path, $key) = explode('@', $index) + [NULL, $this->activeKey];
+
+		return $this->data[$key]->get($path);
+	}
+
+
+	/**
+	 *
+	 */
+	public function dataSet($index, $value)
+	{
+		list($path, $key) = explode('@', $index) + [NULL, $this->activeKey];
+
+		$this->data[$key]->set($path, $value);
+
+		return $this;
+	}
+
+
+	/**
+	 *
+	 */
+	public function index($include_data = FALSE)
+	{
+		if ($include_data) {
+			return sprintf('%s@%s', $this->activePath, $this->activeKey);
+		}
+
+		return $this->activePath;
+	}
+
+
+	/**
+	 *
+	 */
+	protected function init(&$body, $key)
+	{
+		$body = str_replace("\r\n", "\n", trim($body));
+		$body = $this->removeComments($body, FALSE);
+		$body = $this->tokenizeQuotes($body, $parts);
+		$body = $this->removeInlineComments($body);
+		$body = $this->removeReferences($body);
+		$body = $this->removeWhitespace($body);
+		$body = $this->untokenizeQuotes($body, $parts);
+		$body = $this->prepareNewLines($body);
+		$body = $this->prepareSemiColons($body);
+		$data = clone $this->collection;
+
+		if ($key) {
+			$this->activeKey = $key;
+		} else {
+			$this->activeKey = spl_object_hash($data);
+		}
+
+		return $this->data[$this->activeKey] = $data;
+	}
+
+
+	/**
+	 *
+	 */
+	protected function onSetTemplate($key, $value)
+	{
+		if (!is_string($value) || !sscanf($value, self::TOKEN_TEMPLATE, $body)) {
+			return;
+		}
+
+		foreach ($this->promises as $index => $promise) {
+			if (!sscanf($this->dataGet($index), self::TOKEN_PROMISE_RENDER, $template)) {
+				continue;
+			}
+
+			if ($template !== $key) {
+				continue;
+			}
+
+			$this->dataSet($index, $promise());
+
+			unset($this->promises[$index]);
+		}
 	}
 
 
@@ -226,7 +335,7 @@ class Parser
 	 */
 	protected function parseDef($args, $body, $assoc)
 	{
-		$this->templates[$this->index] = [
+		$this->templates[$this->index()] = [
 			'args' => array_map('trim', explode(',', $args)),
 			'body' => $body
 		];
@@ -241,11 +350,11 @@ class Parser
 	protected function parseInc($args, $body, $assoc)
 	{
 		if (!isset($this->templates[$args])) {
-			$this->promises[$this->index] = function () use ($args, $body, $assoc) {
+			$this->promises[$this->index(TRUE)] = function () use ($args, $body, $assoc) {
 				return $this->parseInc($args, $body, $assoc);
 			};
 
-			return sprintf(self::TOKEN_PROMISE, $args);
+			return sprintf(self::TOKEN_PROMISE_RENDER, $args);
 		}
 
 		$map    = $this->templates[$args];
@@ -267,11 +376,11 @@ class Parser
 	protected function parseMap($args, $body, $assoc)
 	{
 		if (!isset($this->templates[$args])) {
-			$this->promises[$this->index] = function() use ($args, $body, $assoc) {
+			$this->promises[$this->index(TRUE)] = function() use ($args, $body, $assoc) {
 				return $this->parseMap($args, $body, $assoc);
 			};
 
-			return sprintf(self::TOKEN_PROMISE, $args);
+			return sprintf(self::TOKEN_PROMISE_RENDER, $args);
 		}
 
 		$map    = $this->templates[$args];
