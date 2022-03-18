@@ -112,7 +112,7 @@ class Parser
 		//
 
 		$jin_data   = clone $this->collection;
-		$jin_string = trim($jin_string);
+		$jin_string = str_replace("\r\n", "\n", trim($jin_string));
 		$jin_string = $this->removeComments($jin_string, FALSE);
 		$jin_string = $this->tokenizeQuotes($jin_string, $parts);
 		$jin_string = $this->removeInlineComments($jin_string);

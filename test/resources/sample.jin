@@ -128,7 +128,7 @@ qmultiValue    = "
 	upNullValue  = null
 	envValue     = env(VALUE, FALSE)
 	runValue     = run(md5('value'))
-	comValue     = This value is commented ; So this should not be seen
+	comValue     = This value is commented ; So this should "not be seen"
 	multiValue   = This is multiple lines of text.  Line endings should be
 	preserved until `foo=bar` or `[section]` or `\n\n`.
 
@@ -146,7 +146,7 @@ qmultiValue    = "
 			;
 
 			"arrayValue": [
-				"value1", ; Inline Comment
+				"value1", ; Inline "Comment
 				"value2"
 			],
 
@@ -155,7 +155,10 @@ qmultiValue    = "
 				"breaking":
 					"Multi
 						Line
-					Text"
+					Text",
+				"echo": "
+					slfajsdfljsdf
+				",
 			}
 		}
 
