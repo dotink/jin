@@ -260,6 +260,10 @@ class Parser
 
 		if ($key) {
 			$this->activeKey = $key;
+
+			if (isset($this->data[$this->activeKey])) {
+				return $this->data[$this->activeKey];
+			}
 		} else {
 			$this->activeKey = spl_object_hash($data);
 		}
