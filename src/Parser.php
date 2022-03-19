@@ -2,6 +2,7 @@
 
 namespace Dotink\Jin;
 
+use RuntimeException;
 use SplObjectStorage;
 
 /**
@@ -22,8 +23,8 @@ class Parser
 	const REGEX_WHITESPACE          = '\t|\s';
 
 	const TOKEN_QUOTED              = '___QUOTED@(%s)';
-	const TOKEN_PROMISE_RENDER      = '___RENDER//%s';
-	const TOKEN_TEMPLATE            = '___TEMPLATE %s';
+	const TOKEN_TEMPLATE            = '___TEMPLATE=%s';
+	const TOKEN_PROMISE_RENDER      = '___PROMISE_RENDER:%s';
 
 
 	/**
@@ -62,12 +63,6 @@ class Parser
 	/**
 	 *
 	 */
-	protected $contexts = array();
-
-
-	/**
-	 *
-	 */
 	protected $functions = array();
 
 
@@ -84,17 +79,24 @@ class Parser
 
 
 	/**
+	 *
+	 */
+	protected $variables = array();
+
+
+	/**
 	 * Create a new Jin
 	 *
 	 * @access public
 	 * @return void
 	 */
-	public function __construct(array $context = [], array $functions = [])
+	public function __construct(array $context = [], array $functions = [], $assoc = TRUE)
 	{
 		$this->collection = new Collection();
+		$this->assoc      = $assoc;
 
 		foreach ($context as $name => $value) {
-			$this->contexts[strtolower($name)] = $value;
+			$this->variables[strtolower($name)] = $value;
 		}
 
 		foreach (static::$builtinFunctions as $name => $value) {
@@ -130,25 +132,16 @@ class Parser
 	 *
 	 * @acces public
 	 * @param string $string The Jin string to parse
-	 * @param boolean $assoc Whether JSON objects should be associative arrays
 	 * @param string $key A string with which to identify the collection
 	 * @return Collection The parsed Jin string as a Collection
 	 */
-	public function parse($string, $assoc = TRUE, $key = NULL)
+	public function parse($string, $key = NULL)
 	{
 		//
 		// Boot
 		//
 
 		$collection = $this->init($string, $key);
-
-		//
-		// Set any special handlers
-		//
-
-		$collection->on('set', function($key, $value) {
-			$this->onSetTemplate($key, $value);
-		});
 
 		//
 		// Main parsing loop
@@ -158,7 +151,7 @@ class Parser
 			$this->activePath = $path;
 
 			if (is_scalar($values)) {
-				$this->dataSet($this->activePath, $this->parseValue(NULL, $values, $assoc));
+				$this->dataSet($this->activePath, $this->parseValue($values, NULL));
 
 			} else {
 				$this->dataSet($this->activePath, array());
@@ -166,16 +159,10 @@ class Parser
 				foreach ($values as $sub_path => $value) {
 					$this->activePath  = $path. '.' . $sub_path;
 
-					$this->dataSet($this->activePath, $this->parseValue(NULL, $value, $assoc));
+					$this->dataSet($this->activePath, $this->parseValue($value, NULL));
 				}
 			}
 		}
-
-		//
-		// Clear Handlers
-		//
-
-		$collection->on('set', NULL);
 
 		//
 		// Extend
@@ -183,13 +170,14 @@ class Parser
 
 		if ($collection->has('--extends')) {
 			$file   = $collection->get('--extends');
-			$merged = $this->parse(file_get_contents($file), $assoc);
+			$merged = $this->parse(file_get_contents($file)); // TODO: Fix merging to work with keys?
 
 			$merged->mergeRecursiveDistinct($collection);
 			$merged->delete($collection->get('--without', []));
 
 			return $merged;
 		}
+
 
 		return $collection;
 	}
@@ -211,7 +199,7 @@ class Parser
 	 */
 	protected function callRun($php)
 	{
-		extract($this->contexts);
+		extract($this->variables);
 
 		return eval("return $php;");
 	}
@@ -244,9 +232,9 @@ class Parser
 	/**
 	 *
 	 */
-	public function index($include_data = FALSE)
+	public function index($include_key = FALSE)
 	{
-		if ($include_data) {
+		if ($include_key) {
 			return sprintf('%s@%s', $this->activePath, $this->activeKey);
 		}
 
@@ -283,32 +271,7 @@ class Parser
 	/**
 	 *
 	 */
-	protected function onSetTemplate($key, $value)
-	{
-		if (!is_string($value) || !sscanf($value, self::TOKEN_TEMPLATE, $body)) {
-			return;
-		}
-
-		foreach ($this->promises as $index => $promise) {
-			if (!sscanf($this->dataGet($index), self::TOKEN_PROMISE_RENDER, $template)) {
-				continue;
-			}
-
-			if ($template !== $key) {
-				continue;
-			}
-
-			$this->dataSet($index, $promise());
-
-			unset($this->promises[$index]);
-		}
-	}
-
-
-	/**
-	 *
-	 */
-	protected function parseCall($type, $args, $assoc)
+	protected function parseCall($type, $args)
 	{
 		$type = strtolower($type);
 
@@ -322,8 +285,8 @@ class Parser
 		$args = $this->tokenizeQuotes($args, $parts);
 
 		return $this->functions[$type](...array_map(
-			function($arg) use ($assoc, $parts) {
-				return $this->parseValue(NULL, $this->untokenizeQuotes($arg, $parts), $assoc);
+			function($arg) use ($parts) {
+				return $this->parseValue($this->untokenizeQuotes($arg, $parts), NULL);
 			},
 			explode(',', $args)
 		));
@@ -333,12 +296,31 @@ class Parser
 	/**
 	 *
 	 */
-	protected function parseDef($args, $body, $assoc)
+	protected function parseDef($body, $args)
 	{
-		$this->templates[$this->index()] = [
-			'args' => array_map('trim', explode(',', $args)),
-			'body' => $body
-		];
+		//
+		// When a template is defined, we want to define a global path which alway references the
+		// latest iteration of the template via the more specific index.  When we try to resolve it
+		// for any sort of mapping we'll use the global index to reference the more specific one if
+		// if only the path is provided.
+		//
+
+		$this->templates[$this->index()]     = $this->index(TRUE);
+		$this->templates[$this->index(TRUE)] = array_map('trim', explode(',', $args));
+
+		foreach ($this->promises as $index => $promise) {
+			if (!sscanf($this->dataGet($index), self::TOKEN_PROMISE_RENDER, $template_index)) {
+				continue;
+			}
+
+			if (!in_array($template_index, [$this->index(), $this->index(TRUE)])) {
+				continue;
+			}
+
+			$this->dataSet($index, $promise($body));
+
+			unset($this->promises[$index]);
+		}
 
 		return sprintf(self::TOKEN_TEMPLATE, $body);
 	}
@@ -347,46 +329,71 @@ class Parser
 	/**
 	 *
 	 */
-	protected function parseInc($args, $body, $assoc)
+	protected function parseInc($body, $index, $template = NULL)
 	{
-		if (!isset($this->templates[$args])) {
-			$this->promises[$this->index(TRUE)] = function () use ($args, $body, $assoc) {
-				return $this->parseInc($args, $body, $assoc);
+		if (!isset($this->templates[$index])) {
+			$this->promises[$this->index(TRUE)] = function ($template) use ($body, $index) {
+				return $this->parseInc($body, $index, $template);
 			};
 
-			return sprintf(self::TOKEN_PROMISE_RENDER, $args);
+			return sprintf(self::TOKEN_PROMISE_RENDER, $index);
 		}
 
-		$map    = $this->templates[$args];
+		//
+		// Resolve global template if necessary
+		//
+
+		if (!strpos($index, '@')) {
+			$index = $this->templates[$index];
+		}
+
+		if (!$template) {
+			$template = substr($this->dataGet($index), strpos(self::TOKEN_TEMPLATE, '=') + 1);
+		}
+
+		$json   = $template;
 		$values = explode("\n", $body);
-		$json   = $map['body'];
+		$args   = $this->templates[$index];
 
 		foreach ($values as $i => $value) {
-			$value = $this->parseValue(NULL, $value, $assoc);
-			$json  = str_replace('$' . $map['args'][$i], json_encode($value), $json);
+			$value = $this->parseValue($value, NULL);
+			$json  = str_replace('$' . $args[$i], json_encode($value), $json);
 		}
 
-		return $this->parseValue(NULL, $json, $assoc);
+		return $this->parseValue($json, NULL);
 	}
 
 
 	/**
 	 *
 	 */
-	protected function parseMap($args, $body, $assoc)
+	protected function parseMap($body, $index, $template = NULL)
 	{
-		if (!isset($this->templates[$args])) {
-			$this->promises[$this->index(TRUE)] = function() use ($args, $body, $assoc) {
-				return $this->parseMap($args, $body, $assoc);
+		if (!isset($this->templates[$index])) {
+			$this->promises[$this->index(TRUE)] = function ($template) use ($body, $index) {
+				return $this->parseMap($body, $index, $template);
 			};
 
-			return sprintf(self::TOKEN_PROMISE_RENDER, $args);
+			return sprintf(self::TOKEN_PROMISE_RENDER, $index);
 		}
 
-		$map    = $this->templates[$args];
+		//
+		// Resolve global template if necessary
+		//
+
+		if (!strpos($index, '@')) {
+			$index = $this->templates[$index];
+		}
+
+		if (!$template) {
+			$template = substr($this->dataGet($index), strpos(self::TOKEN_TEMPLATE, '=') + 1);
+		}
+
 		$values = explode("\n", $body);
+		$args   = $this->templates[$index];
 
 		foreach ($values as $i => $row) {
+			$json = $template;
 			$row  = trim(rtrim($row, ','), "\t");
 
 			if (!$row) {
@@ -394,9 +401,8 @@ class Parser
 			}
 
 			$data = str_getcsv(preg_replace('/\t+/', "\t", $row), "\t");
-			$json = $map['body'];
 
-			if (count($data) != count($map['args'])) {
+			if (count($data) != count($args)) {
 				throw new \RuntimeException(sprintf(
 					'Error parsing map(), row %s, the number of values does not match the ' .
 					'the number of map arguments: %s',
@@ -406,25 +412,25 @@ class Parser
 			}
 
 			foreach ($data as $j => $value) {
-				$value = $this->parseValue(NULL, $value, $assoc);
+				$value = $this->parseValue($value, NULL);
 				$json  = str_replace(
-					'$' . $map['args'][$j],
+					'$' . $args[$j],
 					json_encode($value, JSON_UNESCAPED_SLASHES),
 					$json
 				);
 			}
 
-			$values[$i] = $this->parseValue(NULL, $json, $assoc);
+			$values[$i] = $this->parseValue($json, NULL);
 		}
 
 		return array_filter($values);
 	}
 
 
-	/**trim(
+	/**
 	 *
 	 */
-	protected function parseValue($args, $value, $assoc)
+	protected function parseValue($value, $args)
 	{
 		$value = trim($value);
 		$value = str_replace(static::COLLAPSE_CHARACTER, "\n", $value);
@@ -437,16 +443,14 @@ class Parser
 
 			if (strtolower($method) !== 'parsecall' && is_callable([$this, $method])) {
 				$value = $this->$method(
-					trim($matches['args'] ?? NULL),
 					trim($matches['body'] ?? NULL),
-					$assoc
+					trim($matches['args'] ?? NULL)
 				);
 
 			} else {
 				$value = $this->parseCall(
 					trim($matches['type'] ?? NULL),
-					trim($matches['args'] ?? NULL),
-					$assoc
+					trim($matches['args'] ?? NULL)
 				);
 
 			}
@@ -489,7 +493,7 @@ class Parser
 				return $part == '""' ? $part : str_replace('""', "\\\"", $part);
 			}, $parts));
 
-			if (is_null($value = json_decode($original = $value, $assoc))) {
+			if (is_null($value = json_decode($original = $value, $this->assoc))) {
 				throw new \RuntimeException(sprintf(
 					'Error parsing JSON data: %s',
 					$original

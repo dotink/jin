@@ -30,8 +30,8 @@ qmultiValue    = "
 	; More complex JSON-like values
 	;
 
-	arrayValue   = ["value1", "value2"]  ; test like "
-	objectValue  = {"value": "valuewithsmi;"} ; this "
+	arrayValue   = ["value1", "value2"]  ; test like
+	objectValue  = {"value": "valuewithsmi;"} ; this
 	complexValue = {
 		;
 		; Comment
@@ -67,8 +67,7 @@ qmultiValue    = "
 	; Templates
 	;
 
-	include = inc(complex.template)
-	{
+	include = inc(complex.template) {
 		1
 
 		;
@@ -78,8 +77,7 @@ qmultiValue    = "
 		2 ; Inline Comment
 	}
 
-	mapping = map(complex.template)
-	{
+	mapping = map(complex.template) {
 		1	2
 
 		;
@@ -89,11 +87,10 @@ qmultiValue    = "
 		3	env(VALUE) ; Inline Comment
 	}
 
-	template = def(value1, value2)
-	{
+	template = def(value1, value2) {
 		{
 			"value1": $value1,
-			"value2": $value2
+			"value2": $value2,
 		}
 	}
 

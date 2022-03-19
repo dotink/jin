@@ -9,8 +9,8 @@ final class ParsingTest extends TestCase
 		putenv('FOOBAR=foo');
 		putenv('VALUE=value');
 
-		$sample_file  = file_get_contents(__DIR__ . '/../resources/sample.jin');
-		$this->parser = new Dotink\Jin\Parser([
+		$sample_jin_content = file_get_contents(__DIR__ . '/../resources/sample.jin');
+		$this->arrayParser  = new Dotink\Jin\Parser([
 			'foo' => 'bar'
 		], [
 			'hello' => function($name) {
@@ -18,14 +18,23 @@ final class ParsingTest extends TestCase
 			}
 		]);
 
-		$this->arrayData = $this->parser->parse($sample_file);
-		$this->objData   = $this->parser->parse($sample_file, FALSE);
+		$this->objParser = new Dotink\Jin\Parser([
+			'foo' => 'bar'
+		], [
+			'hello' => function ($name) {
+				return 'Hello ' . $name . '!';
+			}
+		], FALSE);
+
+		$this->arrayData1 = $this->arrayParser->parse($sample_jin_content);
+		$this->arrayData2 = $this->arrayParser->parse($sample_jin_content);
+		$this->objData    = $this->objParser->parse($sample_jin_content);
 	}
 
 	public function testSimpleValue()
 	{
 		$this->assertSame(
-			$this->arrayData->get('simpleValue'),
+			$this->arrayData1->get('simpleValue'),
 			'value'
 		);
 	}
@@ -34,7 +43,7 @@ final class ParsingTest extends TestCase
 	{
 		$this->assertSame(
 			'value',
-			$this->arrayData->get('quotedValue')
+			$this->arrayData1->get('quotedValue')
 		);
 	}
 
@@ -42,7 +51,7 @@ final class ParsingTest extends TestCase
 	{
 		$this->assertSame(
 			1,
-			$this->arrayData->get('intValue')
+			$this->arrayData1->get('intValue')
 		);
 	}
 
@@ -51,7 +60,7 @@ final class ParsingTest extends TestCase
 	{
 		$this->assertSame(
 			1.03,
-			$this->arrayData->get('floatValue')
+			$this->arrayData1->get('floatValue')
 		);
 	}
 
@@ -60,7 +69,7 @@ final class ParsingTest extends TestCase
 	{
 		$this->assertSame(
 			13,
-			$this->arrayData->get('hexValue')
+			$this->arrayData1->get('hexValue')
 		);
 	}
 
@@ -68,7 +77,7 @@ final class ParsingTest extends TestCase
 	{
 		$this->assertSame(
 			13,
-			$this->arrayData->get('binValue')
+			$this->arrayData1->get('binValue')
 		);
 	}
 
@@ -76,7 +85,7 @@ final class ParsingTest extends TestCase
 	{
 		$this->assertSame(
 			13,
-			$this->arrayData->get('octValue')
+			$this->arrayData1->get('octValue')
 		);
 	}
 
@@ -85,7 +94,7 @@ final class ParsingTest extends TestCase
 	{
 		$this->assertSame(
 			'This value is commented',
-			$this->arrayData->get('comValue')
+			$this->arrayData1->get('comValue')
 		);
 	}
 
@@ -94,7 +103,7 @@ final class ParsingTest extends TestCase
 	{
 		$this->assertSame(
 			'This value is quoted ; with a " so should be seen',
-			$this->arrayData->get('comQuotedValue')
+			$this->arrayData1->get('comQuotedValue')
 		);
 	}
 
@@ -103,7 +112,7 @@ final class ParsingTest extends TestCase
 	{
 		$this->assertSame(
 			"This is multiple lines of text.  Line endings should be\npreserved until `foo=bar` or `[section]` or `\\n\\n`.",
-			$this->arrayData->get('multiValue')
+			$this->arrayData1->get('multiValue')
 		);
 	}
 
@@ -114,7 +123,15 @@ final class ParsingTest extends TestCase
 				'value1' => 1,
 				'value2' => 2
 			],
-			$this->arrayData->get('complex.include')
+			$this->arrayData1->get('complex.include')
+		);
+
+		$this->assertSame(
+			[
+				'value1' => 1,
+				'value2' => 2
+			],
+			$this->arrayData2->get('complex.include')
 		);
 
 		$this->assertSame(
@@ -126,21 +143,21 @@ final class ParsingTest extends TestCase
 
 	public function testRun()
 	{
-		$this->assertSame($this->arrayData->get('complex.run'), 'bar');
+		$this->assertSame($this->arrayData1->get('complex.run'), 'bar');
 	}
 
 
 	public function testEnv()
 	{
-		$this->assertSame($this->arrayData->get('complex.envWithDefault'), 'bar');
-		$this->assertSame($this->arrayData->get('complex.envWithoutDefault'), NULL);
-		$this->assertSame($this->arrayData->get('complex.envSetWithDefault'), 'foo');
+		$this->assertSame($this->arrayData1->get('complex.envWithDefault'), 'bar');
+		$this->assertSame($this->arrayData1->get('complex.envWithoutDefault'), NULL);
+		$this->assertSame($this->arrayData1->get('complex.envSetWithDefault'), 'foo');
 	}
 
 
 	public function testFunction()
 	{
-		$this->assertSame($this->arrayData->get('complex.customFunction'), 'Hello Matt!');
+		$this->assertSame($this->arrayData1->get('complex.customFunction'), 'Hello Matt!');
 	}
 
 	public function testMapping()
@@ -156,7 +173,21 @@ final class ParsingTest extends TestCase
 					'value2' => 'value'
 				]
 			],
-			$this->arrayData->get('complex.mapping')
+			$this->arrayData1->get('complex.mapping')
+		);
+
+		$this->assertSame(
+			[
+				[
+					'value1' => 1,
+					'value2' => 2
+				],
+				[
+					'value1' => 3,
+					'value2' => 'value'
+				]
+			],
+			$this->arrayData2->get('complex.mapping')
 		);
 
 		$this->assertSame(
@@ -169,12 +200,12 @@ final class ParsingTest extends TestCase
 	{
 		$this->assertSame(
 			'value',
-			$this->arrayData->get('reference.sub1.sub1.simpleValue')
+			$this->arrayData1->get('reference.sub1.sub1.simpleValue')
 		);
 
 		$this->assertSame(
 			'value',
-			$this->arrayData->get('reference.sub2.simpleValue')
+			$this->arrayData1->get('reference.sub2.simpleValue')
 		);
 	}
 
@@ -182,28 +213,28 @@ final class ParsingTest extends TestCase
 	public function testDashSection()
 	{
 		$this->assertSame(
-			$this->arrayData->get('dash-section.simpleValue'),
+			$this->arrayData1->get('dash-section.simpleValue'),
 			'value'
 		);
 
 		$this->assertSame(
 			'value',
-			$this->arrayData->get('dash-section.quotedValue')
+			$this->arrayData1->get('dash-section.quotedValue')
 		);
 
 		$this->assertSame(
 			1,
-			$this->arrayData->get('dash-section.intValue')
+			$this->arrayData1->get('dash-section.intValue')
 		);
 
 		$this->assertSame(
 			'This value is commented',
-			$this->arrayData->get('dash-section.comValue')
+			$this->arrayData1->get('dash-section.comValue')
 		);
 
 		$this->assertSame(
 			"This is multiple lines of text.  Line endings should be\npreserved until `foo=bar` or `[section]` or `\\n\\n`.",
-			$this->arrayData->get('multiValue')
+			$this->arrayData1->get('multiValue')
 		);
 	}
 }
