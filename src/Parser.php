@@ -170,12 +170,13 @@ class Parser
 
 		if ($collection->has('--extends')) {
 			$file   = $collection->get('--extends');
-			$merged = $this->parse(file_get_contents($file)); // TODO: Fix merging to work with keys?
 
-			$merged->mergeRecursiveDistinct($collection);
+			$merged = $this->parse(file_get_contents($file));
 			$merged->delete($collection->get('--without', []));
 
-			return $merged;
+			foreach ($merged->flatten() as $key => $value) {
+				$collection->set($key, $value);
+			}
 		}
 
 
@@ -456,7 +457,6 @@ class Parser
 					trim($matches['type'] ?? NULL),
 					trim($matches['args'] ?? NULL)
 				);
-
 			}
 
 		} elseif (strtolower($value) == 'null') {
@@ -474,7 +474,7 @@ class Parser
 		} elseif (substr($value, 0, 2) == '0x' && ctype_xdigit(substr($value, 2))) {
 			$value = hexdec($value);
 
-		} elseif ($fch == '0' && preg_match('#[0-7]*#', $value)) {
+		} elseif ($fch == '0' && preg_match('#^[0-7]*$#', $value)) {
 			$value = octdec($value);
 
 		} elseif (is_numeric($value)) {
