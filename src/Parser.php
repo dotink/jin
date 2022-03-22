@@ -175,7 +175,9 @@ class Parser
 			$merged->delete($collection->get('--without', []));
 
 			foreach ($merged->flatten() as $key => $value) {
-				$collection->set($key, $value);
+				if (!$collection->has($key)) {
+					$collection->set($key, $value);
+				}
 			}
 		}
 
