@@ -468,7 +468,7 @@ class Parser
 		} elseif (strtolower($value) == 'false') {
 			$value = FALSE;
 
-		} elseif (substr($value, 0, 2) == '0b' && preg_match('#[0-1]*#', $value)) {
+		} elseif (substr($value, 0, 2) == '0b' && preg_match('#^[0-1]*$#', substr($value, 2))) {
 			$value = bindec($value);
 
 		} elseif (substr($value, 0, 2) == '0x' && ctype_xdigit(substr($value, 2))) {
