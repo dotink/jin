@@ -2,8 +2,7 @@
 
 namespace Dotink\Jin;
 
-use RuntimeException;
-use SplObjectStorage;
+use stdClass;
 
 /**
  *
@@ -226,7 +225,25 @@ class Parser
 	{
 		list($path, $key) = explode('@', $index) + [NULL, $this->activeKey];
 
-		$this->data[$key]->set($path, $value);
+		if ($this->data[$key]->has($path)) {
+			$existing = $this->data[$key]->get($path);
+
+			if (!is_scalar($existing)) {
+				if ($existing instanceof stdClass) {
+					$this->data[$key]->mergeRecursiveDistinct($path, $value);
+					$this->data[$key]->set($path, (object) $this->data[$key]->get($path));
+
+				} elseif (is_array($existing)) {
+					$this->data[$key]->mergeRecursiveDistinct($path, $value);
+
+				} else {
+					$this->data[$key]->set($path, $value);
+				}
+			}
+
+		} else {
+			$this->data[$key]->set($path, $value);
+		}
 
 		return $this;
 	}
