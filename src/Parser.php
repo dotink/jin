@@ -239,6 +239,9 @@ class Parser
 				} else {
 					$this->data[$key]->set($path, $value);
 				}
+
+			} else {
+				$this->data[$key]->set($path, $value);
 			}
 
 		} else {
