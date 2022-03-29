@@ -9,6 +9,8 @@ use stdClass;
  */
 class Parser
 {
+	const MERGE_KEY                 = '___merging___';
+
 	const COLLAPSE_CHARACTER        = "\xC2\xA0";
 	const SEMICOLON_CHARACTER       = "\xC2\xAD";
 
@@ -169,8 +171,8 @@ class Parser
 
 		if ($collection->has('--extends')) {
 			$file   = $collection->get('--extends');
-
 			$merged = $this->parse(file_get_contents($file));
+
 			$merged->delete($collection->get('--without', []));
 
 			foreach ($merged->flatten() as $key => $value) {
@@ -178,8 +180,9 @@ class Parser
 					$collection->set($key, $value);
 				}
 			}
-		}
 
+			unset($this->data[spl_object_hash($merged)]);
+		}
 
 		return $collection;
 	}
@@ -224,7 +227,6 @@ class Parser
 	public function dataSet($index, $value)
 	{
 		list($path, $key) = explode('@', $index) + [NULL, $this->activeKey];
-
 		if ($this->data[$key]->has($path)) {
 			$existing = $this->data[$key]->get($path);
 
