@@ -1,0 +1,12 @@
+#!/usr/bin/env php
+<?php
+
+include __DIR__ . '/../vendor/autoload.php';
+
+$parser    = new Dotink\Jin\Parser();
+$variables = $parser->parse(file_get_contents(realpath($argv[1])))->flatten('_');
+
+foreach ($variables as $name => $value) {
+	echo sprintf('%s="%s"', $name, $value);
+	echo PHP_EOL;
+}
