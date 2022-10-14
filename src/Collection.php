@@ -67,4 +67,20 @@ class Collection extends Dot
 
 		return parent::set($keys, $value);
 	}
+
+
+	/**
+	 *
+	 */
+	public function withDelimiter(string $delimiter, callable $callback)
+	{
+		$original_delimiter = $this->delimiter;
+		$this->delimiter    = $delimiter;
+
+		$callback($this);
+
+		$this->delimiter = $original_delimiter;
+
+		return $this;
+	}
 }

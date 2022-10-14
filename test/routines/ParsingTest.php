@@ -160,6 +160,12 @@ final class ParsingTest extends TestCase
 		$this->assertSame($this->arrayData1->get('complex.customFunction'), 'Hello Matt!');
 	}
 
+
+	public function testMerging()
+	{
+		$this->assertSame($this->arrayData1->get('nesting.dotKey')['butt.test'], 'bar');
+	}
+
 	public function testMapping()
 	{
 		$this->assertSame(

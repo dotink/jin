@@ -11,8 +11,9 @@ class Parser
 {
 	const MERGE_KEY                 = '___merging___';
 
-	const COLLAPSE_CHARACTER        = "\xC2\xA0";
-	const SEMICOLON_CHARACTER       = "\xC2\xAD";
+	const COLLAPSE_CHARACTER        = "\xC2\xA0";     // No-Break Space?
+	const SEMICOLON_CHARACTER       = "\xC2\xAD";     // Soft Hyphen?
+	const MERGE_DELIMITER           = "\xE2\x81\xA0"; // Word Joiner?
 
 	const REGEX_STRUCTURE           = '#^(?<type>[a-z]+)\s*\((?<args>.*)\)\s*(?:\{(?<body>.*)\})?$#s';
 	const REGEX_QUOTED_STRING       = '#"((?:""|[^"])*)"#s';
@@ -175,11 +176,13 @@ class Parser
 
 			$merged->delete($collection->get('--without', []));
 
-			foreach ($merged->flatten() as $key => $value) {
-				if (!$collection->has($key)) {
-					$collection->set($key, $value);
+			$collection->withDelimiter(static::MERGE_DELIMITER, function($collection) use ($merged) {
+				foreach ($merged->flatten(static::MERGE_DELIMITER) as $key => $value) {
+					if (!$collection->has($key)) {
+						$collection->set($key, $value);
+					}
 				}
-			}
+			});
 
 			unset($this->data[spl_object_hash($merged)]);
 		}

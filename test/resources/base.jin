@@ -3,3 +3,6 @@ test = yo
 [nesting]
 
 	foo = bar
+	dotKey = {
+		"butt.test": "bar"
+	}
