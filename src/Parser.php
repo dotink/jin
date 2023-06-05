@@ -178,9 +178,7 @@ class Parser
 
 			$merged->withDelimiter(static::MERGE_DELIMITER, function($merged) use ($collection) {
 				foreach ($collection->flatten(static::MERGE_DELIMITER) as $key => $value) {
-					if (!$merged->has($key)) {
-						$merged->set($key, $value);
-					}
+					$merged->set($key, $value);
 				}
 			});
 
