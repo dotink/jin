@@ -176,15 +176,17 @@ class Parser
 
 			$merged->delete($collection->get('--without', []));
 
-			$collection->withDelimiter(static::MERGE_DELIMITER, function($collection) use ($merged) {
-				foreach ($merged->flatten(static::MERGE_DELIMITER) as $key => $value) {
-					if (!$collection->has($key)) {
-						$collection->set($key, $value);
+			$merged->withDelimiter(static::MERGE_DELIMITER, function($merged) use ($collection) {
+				foreach ($collection->flatten(static::MERGE_DELIMITER) as $key => $value) {
+					if (!$merged->has($key)) {
+						$merged->set($key, $value);
 					}
 				}
 			});
 
-			unset($this->data[spl_object_hash($merged)]);
+			unset($this->data[spl_object_hash($collection)]);
+
+			return $merged;
 		}
 
 		return $collection;
