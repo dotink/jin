@@ -171,6 +171,7 @@ class Parser
 		//
 
 		if ($collection->has('--extends')) {
+			$key    = $this->activeKey;
 			$file   = $collection->get('--extends');
 			$merged = $this->parse(file_get_contents($file));
 
@@ -182,9 +183,9 @@ class Parser
 				}
 			});
 
-			unset($this->data[spl_object_hash($collection)]);
+			unset($this->data[$this->activeKey]);
 
-			return $merged;
+			return $this->data[$key] = $merged;
 		}
 
 		return $collection;
