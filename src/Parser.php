@@ -41,6 +41,12 @@ class Parser
 	/**
 	 *
 	 */
+	protected $assoc = TRUE;
+
+
+	/**
+	 *
+	 */
 	protected $activeKey = NULL;
 
 
