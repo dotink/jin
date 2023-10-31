@@ -453,9 +453,15 @@ class Parser
 			}
 
 			foreach ($data as $j => $value) {
-				$value = $this->parseValue($value, NULL);
+				if ($args[$j][0] == '!') {
+					$param = substr($args[$j], 1);
+				} else {
+					$param = $args[$j];
+					$value = $this->parseValue($value, NULL);
+				}
+
 				$json  = str_replace(
-					'$' . $args[$j],
+					'$' . $param,
 					json_encode($value, JSON_UNESCAPED_SLASHES),
 					$json
 				);
