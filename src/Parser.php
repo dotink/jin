@@ -33,8 +33,8 @@ class Parser
 	 *
 	 */
 	static protected $builtinFunctions = [
-		'env' => 'callEnv',
-		'run' => 'callRun'
+		'env'  => 'callEnv',
+		'run!' => 'callRun'
 	];
 
 
@@ -316,20 +316,24 @@ class Parser
 	{
 		$type = strtolower($type);
 
-		if (!isset($this->functions[$type])) {
-			throw new \RuntimeException(sprintf(
-				'Unable to call configuration function "%s", no such function registered',
-				$type
+		if (isset($this->functions[$type])) {
+			$args = $this->tokenizeQuotes($args, $parts);
+
+			return $this->functions[$type](...array_map(
+				function($arg) use ($parts) {
+					return $this->parseValue($this->untokenizeQuotes($arg, $parts), NULL);
+				},
+				explode(',', $args)
 			));
 		}
 
-		$args = $this->tokenizeQuotes($args, $parts);
+		if (isset($this->functions[$type . '!'])) {
+			return $this->functions[$type . '!']($args);
+		}
 
-		return $this->functions[$type](...array_map(
-			function($arg) use ($parts) {
-				return $this->parseValue($this->untokenizeQuotes($arg, $parts), NULL);
-			},
-			explode(',', $args)
+		throw new \RuntimeException(sprintf(
+			'Unable to call configuration function "%s", no such function registered',
+			$type
 		));
 	}
 
