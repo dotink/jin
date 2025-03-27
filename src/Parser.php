@@ -2,6 +2,7 @@
 
 namespace Dotink\Jin;
 
+use RuntimeException;
 use stdClass;
 
 /**
@@ -20,7 +21,7 @@ class Parser
 	const REGEX_TRAILING_COMMA      = '#,\s*(\\]|\\})#';
 
 	const REGEX_CATEGORY_IDENTIFIER = '[\\\\\\/a-zA-Z0-9-_.&]+';
-	const REGEX_FIELD_IDENTIFIER    = '[a-zA-Z0-9-_]+';
+	const REGEX_FIELD_IDENTIFIER    = '[a-zA-Z0-9-_.]+';
 	const REGEX_NEW_LINE            = '\n';
 	const REGEX_WHITESPACE          = '\t|\s';
 
@@ -117,7 +118,7 @@ class Parser
 
 		foreach ($this->functions as $name => $value) {
 			if (!is_callable($value)) {
-				throw new \RuntimeException(
+				throw new RuntimeException(
 					'Cannot register function "%s", must map to callable',
 					$name
 				);
@@ -155,7 +156,15 @@ class Parser
 		// Main parsing loop
 		//
 
-		foreach (parse_ini_string($string, TRUE, INI_SCANNER_RAW) as $path => $values) {
+		$data = @parse_ini_string($string, TRUE, INI_SCANNER_RAW);
+
+		if ($data === FALSE) {
+			throw new RuntimeException(sprintf(
+				'Error parsing INI structure, valid identifiers can contain alphanumeric characters, dashes, underscores, and periods, or in the case of sections, ampersands.'
+			));
+		}
+
+		foreach ($data as $path => $values) {
 			$this->activePath = $path;
 
 			if (is_scalar($values)) {
@@ -331,7 +340,7 @@ class Parser
 			return $this->functions[$type . '!']($args);
 		}
 
-		throw new \RuntimeException(sprintf(
+		throw new RuntimeException(sprintf(
 			'Unable to call configuration function "%s", no such function registered',
 			$type
 		));
@@ -449,7 +458,7 @@ class Parser
 
 
 			if (count($data) != count($args)) {
-				throw new \RuntimeException(sprintf(
+				throw new RuntimeException(sprintf(
 					'Error parsing map(), row %s, the number of values does not match the ' .
 					'the number of map arguments: %s',
 					$i + 1,
@@ -546,8 +555,9 @@ class Parser
 			}, $parts));
 
 			if (is_null($value = json_decode($original = $value, $this->assoc))) {
-				throw new \RuntimeException(sprintf(
-					'Error parsing JSON data: %s',
+				throw new RuntimeException(sprintf(
+					'Error parsing JSON data. %s in: %s',
+					json_last_error_msg(),
 					$original
 				));
 			}
@@ -649,7 +659,7 @@ class Parser
 					}
 
 					if ($refcount - $stack[$x][0] > 1) {
-						throw new \RuntimeException(sprintf(
+						throw new RuntimeException(sprintf(
 							'Invalid number of references found, nesting too deeply, in ' .
 							'section: %s',
 							$matches[0]
