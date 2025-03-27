@@ -540,6 +540,8 @@ class Parser
 			} else {
 				$value = intval($value);
 			}
+		} elseif ([$fch, $lch] == ['(', ')']) {
+			$value = trim(substr($value, 1, -1));
 
 		} elseif (in_array([$fch, $lch], [['{', '}'], ['[', ']']])) {
 			$value = str_replace(
