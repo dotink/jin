@@ -21,7 +21,7 @@ class Parser
 	const REGEX_TRAILING_COMMA      = '#,\s*(\\]|\\})#';
 
 	const REGEX_CATEGORY_IDENTIFIER = '[\\\\\\/a-zA-Z0-9-_.&]+';
-	const REGEX_FIELD_IDENTIFIER    = '[a-zA-Z0-9-_.]+';
+	const REGEX_FIELD_IDENTIFIER    = '[a-zA-Z0-9-_.:]+';
 	const REGEX_NEW_LINE            = '\n';
 	const REGEX_WHITESPACE          = '\t|\s';
 
