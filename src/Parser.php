@@ -168,7 +168,7 @@ class Parser
 			$this->activePath = $path;
 
 			if (is_scalar($values)) {
-				$this->dataSet($this->activePath, $this->parseValue($values, NULL));
+				$this->dataSet($this->activePath, $this->parseValue($values));
 
 			} else {
 				$this->dataSet($this->activePath, array());
@@ -176,7 +176,7 @@ class Parser
 				foreach ($values as $sub_path => $value) {
 					$this->activePath  = $path. '.' . $sub_path;
 
-					$this->dataSet($this->activePath, $this->parseValue($value, NULL));
+					$this->dataSet($this->activePath, $this->parseValue($value));
 				}
 			}
 		}
@@ -325,19 +325,35 @@ class Parser
 	{
 		$type = strtolower($type);
 
-		if (isset($this->functions[$type])) {
-			$args = $this->tokenizeQuotes($args, $parts);
-
-			return $this->functions[$type](...array_map(
-				function($arg) use ($parts) {
-					return $this->parseValue($this->untokenizeQuotes($arg, $parts), NULL);
-				},
-				explode(',', $args)
-			));
-		}
-
 		if (isset($this->functions[$type . '!'])) {
 			return $this->functions[$type . '!']($args);
+		}
+
+		if (isset($this->functions[$type])) {
+			$pair = ['}' => '{', ')' => '(', ']' => '[', '"' => '"'];
+			$argv = [];
+			$ctx  = [];
+			$pos  = 0;
+
+			for ($x = $pos; $x < strlen($args); $x++) {
+				if (in_array($args[$x], array_values($pair))) {
+					$ctx[] = $args[$x];
+				}
+
+				if (!count($ctx) && $args[$x] == ',') {
+					$argv[] = substr($args, $pos, $x);
+					$pos    = $x+1;
+				}
+
+				if (isset($pair[$args[$x]]) && $args[$x] == $pair[$args[$x]]) {
+					array_pop($ctx);
+				}
+			}
+
+			$argv[] = substr($args, $pos, $x);
+			$args   = array_map([$this, 'parseValue'], $argv);
+
+			return $this->functions[$type](...$args);
 		}
 
 		throw new RuntimeException(sprintf(
@@ -410,11 +426,11 @@ class Parser
 		$args   = $this->templates[$index];
 
 		foreach ($values as $i => $value) {
-			$value = $this->parseValue($value, NULL);
+			$value = $this->parseValue($value);
 			$json  = str_replace('$' . $args[$i], json_encode($value), $json);
 		}
 
-		return $this->parseValue($json, NULL);
+		return $this->parseValue($json);
 	}
 
 
@@ -471,7 +487,7 @@ class Parser
 					$param = substr($args[$j], 1);
 				} else {
 					$param = $args[$j];
-					$value = $this->parseValue($value, NULL);
+					$value = $this->parseValue($value);
 				}
 
 				$json  = str_replace(
@@ -482,7 +498,7 @@ class Parser
 			}
 
 
-			$values[$i] = $this->parseValue($json, NULL);
+			$values[$i] = $this->parseValue($json);
 		}
 
 		return array_filter($values);
@@ -492,7 +508,7 @@ class Parser
 	/**
 	 *
 	 */
-	protected function parseValue($value, $args)
+	protected function parseValue($value)
 	{
 		$value = trim($value);
 		$value = str_replace(static::COLLAPSE_CHARACTER, "\n", $value);
@@ -543,7 +559,7 @@ class Parser
 		} elseif ([$fch, $lch] == ['(', ')']) {
 			$value = trim(preg_replace('#^\"|\"$#', '', substr($value, 1, -1)));
 
-		} elseif (in_array([$fch, $lch], [['{', '}'], ['[', ']']])) {
+		} elseif (in_array([$fch, $lch], [['{', '}'], ['[', ']'], ['"', '"']])) {
 			$value = str_replace(
 				["\n", "\t", "\\\\", "\\",],
 				[" ",  " ",  "\\",   "\\\\"],
