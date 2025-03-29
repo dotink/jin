@@ -298,8 +298,8 @@ class Parser
 		$body = $this->tokenizeQuotes($body, $parts);
 		$body = $this->removeInlineComments($body);
 		$body = $this->removeReferences($body);
-		$body = $this->removeWhitespace($body);
 		$body = $this->untokenizeQuotes($body, $parts);
+		$body = $this->removeWhitespace($body);
 		$body = $this->prepareNewLines($body);
 		$body = $this->prepareSemiColons($body);
 		$data = clone $this->collection;
@@ -558,6 +558,7 @@ class Parser
 			}
 		} elseif ([$fch, $lch] == ['<', '>']) {
 			$value = trim(preg_replace('#^\"|\"$#', '', substr($value, 1, -1)));
+			$value = implode("\n", array_map('trim', explode("\n", $value)));
 
 		} elseif (in_array([$fch, $lch], [['{', '}'], ['[', ']'], ['"', '"']])) {
 			$value = str_replace(
